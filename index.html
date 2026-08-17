@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Markdown Formatter</title>
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; base-uri 'none'; form-action 'none'; object-src 'none'">
+<link rel="stylesheet" href="styles.css">
+<script src="marked.min.js"></script>
+<script src="purify.min.js"></script>
+</head>
+<body>
+
+<header>
+  <h1>Markdown&nbsp;Formatter</h1>
+
+  <div class="actions">
+    <span id="copyStatus"></span>
+    <button id="btnCopyRich">Copy Rich Text</button>
+    <button id="btnCopySource">Copy HTML Source</button>
+    <button id="btnDownload">Download .html</button>
+    <button id="btnSettings" class="icon-btn" title="Font settings" aria-label="Font settings">⚙</button>
+  </div>
+</header>
+
+<main>
+  <div class="pane" id="leftPane">
+    <div class="pane-label">Markdown input</div>
+    <textarea id="mdInput" placeholder="Paste or type Markdown here…" spellcheck="false"></textarea>
+  </div>
+  <div class="resizer" id="paneResizer" title="Drag to resize"></div>
+  <div class="pane" id="rightPane">
+    <div class="pane-label pane-label-row">
+      <span>Preview</span>
+      <button id="btnFullscreen" class="icon-btn" title="Fullscreen preview" aria-label="Fullscreen preview">⤢</button>
+    </div>
+    <div id="previewWrap"><div id="preview" class="preview-content"></div></div>
+  </div>
+</main>
+
+<div class="modal-overlay" id="fullscreenModal">
+  <div class="modal-panel fullscreen-panel">
+    <div class="modal-panel-header">
+      <h2>Preview</h2>
+      <button id="btnCloseFullscreen" class="icon-btn" aria-label="Close">✕</button>
+    </div>
+    <div class="fullscreen-body">
+      <div id="previewFullscreen" class="preview-content"></div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="settingsModal">
+  <div class="modal-panel">
+    <div class="modal-panel-header">
+      <h2>Font settings</h2>
+      <button id="btnCloseSettings" class="icon-btn" aria-label="Close">✕</button>
+    </div>
+    <div class="modal-panel-body">
+      <div class="ctrl-group">
+        <label for="headingFont">Heading font</label>
+        <div class="ctrl-row">
+          <select id="headingFont"></select>
+          <input type="text" id="headingFontCustom" class="custom-font-input" placeholder="Font name">
+          <input type="number" id="headingSize" min="10" max="96" step="1" title="Heading size (px)">
+        </div>
+        <div class="color-row">
+          <span class="color-field">
+            <span>Text</span>
+            <input type="color" id="headingFg">
+            <label class="auto-check"><input type="checkbox" id="headingFgAuto"> Auto</label>
+          </span>
+          <span class="color-field">
+            <span>Bg</span>
+            <input type="color" id="headingBg">
+            <label class="auto-check"><input type="checkbox" id="headingBgAuto"> Auto</label>
+          </span>
+        </div>
+      </div>
+
+      <div class="ctrl-group">
+        <label for="bodyFont">Body font</label>
+        <div class="ctrl-row">
+          <select id="bodyFont"></select>
+          <input type="text" id="bodyFontCustom" class="custom-font-input" placeholder="Font name">
+          <input type="number" id="bodySize" min="8" max="40" step="1" title="Body size (px)">
+        </div>
+        <div class="color-row">
+          <span class="color-field">
+            <span>Text</span>
+            <input type="color" id="bodyFg">
+            <label class="auto-check"><input type="checkbox" id="bodyFgAuto"> Auto</label>
+          </span>
+          <span class="color-field">
+            <span>Bg</span>
+            <input type="color" id="bodyBg">
+            <label class="auto-check"><input type="checkbox" id="bodyBgAuto"> Auto</label>
+          </span>
+        </div>
+      </div>
+
+      <div class="ctrl-group">
+        <label for="monoFont">Monospace font</label>
+        <div class="ctrl-row">
+          <select id="monoFont"></select>
+          <input type="text" id="monoFontCustom" class="custom-font-input" placeholder="Font name">
+          <input type="number" id="monoSize" min="8" max="32" step="1" title="Code size (px)">
+        </div>
+        <div class="color-row">
+          <span class="color-field">
+            <span>Text</span>
+            <input type="color" id="monoFg">
+            <label class="auto-check"><input type="checkbox" id="monoFgAuto"> Auto</label>
+          </span>
+          <span class="color-field">
+            <span>Bg</span>
+            <input type="color" id="monoBg">
+            <label class="auto-check"><input type="checkbox" id="monoBgAuto"> Auto</label>
+          </span>
+        </div>
+      </div>
+    </div>
+    <div class="modal-panel-footer">
+      <button id="btnReset" title="Reset fonts and colors to defaults">Reset</button>
+    </div>
+  </div>
+</div>
+
+<footer>Settings save automatically in this browser. "Copy Rich Text" copies formatted content for pasting into emails.</footer>
+
+<script src="app.js"></script>
+</body>
+</html>
