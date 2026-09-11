@@ -270,11 +270,18 @@
   var previewFullscreen = document.getElementById("previewFullscreen");
   var INPUT_KEY = "mdformatter.input.v1";
   function renderNow() {
-    var raw = marked.parse(els.mdInput.value || "");
-    var clean = DOMPurify.sanitize(raw, {
-      ADD_ATTR: ["target"],
-      FORBID_TAGS: ["style", "iframe", "object", "embed"]
-    });
+    var clean;
+    try {
+      var raw = marked.parse(els.mdInput.value || "");
+      clean = DOMPurify.sanitize(raw, {
+        ADD_ATTR: ["target"],
+        FORBID_TAGS: ["style", "iframe", "object", "embed"]
+      });
+    } catch (e) {
+      // Malformed/pathological input shouldn't leave the preview stuck on
+      // stale content with no indication anything went wrong.
+      clean = "<p><em>Could not render this Markdown.</em></p>";
+    }
     els.preview.innerHTML = clean;
     // Skip touching the fullscreen copy's DOM while it's hidden — it's re-synced
     // in openFullscreen() instead, so this cost is only ever paid when it's visible.
@@ -287,6 +294,80 @@
   try { savedInput = localStorage.getItem(INPUT_KEY) || ""; } catch (e) {}
   els.mdInput.value = savedInput;
   renderNow();
+
+  // ---- Drag & drop a .md file onto the input pane ----
+  var MD_EXTENSIONS = /\.(md|markdown|mdown|mkd|mkdn|mdtext|txt|text)$/i;
+  var MAX_DROP_BYTES = 5 * 1024 * 1024;
+  var dropZone = document.getElementById("leftPane");
+  var dragDepth = 0;
+
+  // Only files should trigger the drop UI; dragging a text selection inside the
+  // textarea must keep its native move/copy behaviour.
+  function hasFiles(e) {
+    var types = e.dataTransfer && e.dataTransfer.types;
+    if (!types) return false;
+    return Array.prototype.indexOf.call(types, "Files") !== -1;
+  }
+
+  function setDragState(on) {
+    dropZone.classList.toggle("drag-over", on);
+  }
+
+  dropZone.addEventListener("dragenter", function (e) {
+    if (!hasFiles(e)) return;
+    e.preventDefault();
+    dragDepth++;
+    setDragState(true);
+  });
+  dropZone.addEventListener("dragover", function (e) {
+    if (!hasFiles(e)) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "copy";
+  });
+  dropZone.addEventListener("dragleave", function (e) {
+    if (!hasFiles(e)) return;
+    // dragleave also fires when crossing between child elements, so only clear
+    // the highlight once every matching dragenter has been balanced out.
+    dragDepth = Math.max(0, dragDepth - 1);
+    if (dragDepth === 0) setDragState(false);
+  });
+  dropZone.addEventListener("drop", function (e) {
+    if (!hasFiles(e)) return;
+    e.preventDefault();
+    dragDepth = 0;
+    setDragState(false);
+
+    var files = e.dataTransfer.files;
+    if (!files || !files.length) return;
+    var file = files[0];
+
+    if (!MD_EXTENSIONS.test(file.name) && file.type.indexOf("text/") !== 0) {
+      flashStatus("Not a Markdown file", true);
+      return;
+    }
+    if (file.size > MAX_DROP_BYTES) {
+      flashStatus("File too large (max 5 MB)", true);
+      return;
+    }
+
+    var reader = new FileReader();
+    reader.onload = function () {
+      els.mdInput.value = reader.result;
+      renderNow();
+      flashStatus("Loaded " + file.name + " ✓");
+    };
+    reader.onerror = function () { flashStatus("Could not read file", true); };
+    reader.readAsText(file);
+  });
+
+  // Without this, dropping a file anywhere outside the drop zone makes the
+  // browser navigate away from the app and lose the current input.
+  window.addEventListener("dragover", function (e) {
+    if (hasFiles(e)) e.preventDefault();
+  });
+  window.addEventListener("drop", function (e) {
+    if (hasFiles(e)) e.preventDefault();
+  });
 
   // ---- Build a standalone, inline-styled HTML document from current preview ----
   function buildStandaloneHtml() {
@@ -354,9 +435,13 @@
     });
   }
 
-  function flashStatus(msg) {
+  function flashStatus(msg, isError) {
     els.copyStatus.textContent = msg;
-    setTimeout(function () { els.copyStatus.textContent = ""; }, 2200);
+    els.copyStatus.classList.toggle("error", !!isError);
+    setTimeout(function () {
+      els.copyStatus.textContent = "";
+      els.copyStatus.classList.remove("error");
+    }, 2200);
   }
 
   document.getElementById("btnCopyRich").addEventListener("click", function () {

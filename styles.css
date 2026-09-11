@@ -183,3 +183,17 @@ footer {
 .fullscreen-panel { max-width: min(1100px, 94vw); display: flex; flex-direction: column; max-height: 92vh; }
 .fullscreen-body { flex: 1; overflow: auto; padding: 32px 40px; }
 .fullscreen-body .preview-content { max-width: 800px; margin: 0 auto; }
+
+/* Drag & drop a Markdown file onto the input pane */
+#leftPane { position: relative; }
+#leftPane.drag-over { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(37,99,235,.25); }
+#leftPane.drag-over::after {
+  content: "Drop a .md file to load it";
+  position: absolute; inset: 0; z-index: 5;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(37,99,235,.07);
+  border: 2px dashed var(--accent); border-radius: 10px;
+  color: var(--accent); font-size: 13px; font-weight: 600;
+  pointer-events: none;
+}
+#copyStatus.error { color: #dc2626; }
