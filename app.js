@@ -283,6 +283,7 @@
       clean = "<p><em>Could not render this Markdown.</em></p>";
     }
     els.preview.innerHTML = clean;
+    if (codeTarget) hideCodeCopy();
     // Skip touching the fullscreen copy's DOM while it's hidden — it's re-synced
     // in openFullscreen() instead, so this cost is only ever paid when it's visible.
     if (fullscreenModal.classList.contains("open")) previewFullscreen.innerHTML = clean;
@@ -444,7 +445,7 @@
     }, 2200);
   }
 
-  document.getElementById("btnCopyRich").addEventListener("click", function () {
+  function copyRich(onDone) {
     var built = buildStandaloneHtml();
     var plain = els.preview.textContent;
     try {
@@ -454,15 +455,17 @@
       });
       navigator.clipboard.write([item]).then(function () {
         flashStatus("Copied rich text ✓");
+        if (onDone) onDone(true);
       }, function () {
-        fallbackCopyRich(built.bodyHtml);
+        fallbackCopyRich(built.bodyHtml, onDone);
       });
     } catch (e) {
-      fallbackCopyRich(built.bodyHtml);
+      fallbackCopyRich(built.bodyHtml, onDone);
     }
-  });
+  }
+  document.getElementById("btnCopyRich").addEventListener("click", function () { copyRich(); });
 
-  function fallbackCopyRich(html) {
+  function fallbackCopyRich(html, onDone) {
     var container = document.createElement("div");
     container.contentEditable = true;
     container.style.position = "fixed";
@@ -474,15 +477,213 @@
     var sel = window.getSelection();
     sel.removeAllRanges();
     sel.addRange(range);
-    try {
-      document.execCommand("copy");
-      flashStatus("Copied rich text ✓");
-    } catch (e) {
-      flashStatus("Copy failed");
-    }
+    var ok = false;
+    try { ok = document.execCommand("copy"); } catch (e) {}
+    flashStatus(ok ? "Copied rich text ✓" : "Copy failed", !ok);
     sel.removeAllRanges();
     document.body.removeChild(container);
+    if (onDone) onDone(ok);
   }
+
+  function copyPlain(text, okMsg, onDone) {
+    function finish(ok) {
+      flashStatus(ok ? okMsg : "Copy failed", !ok);
+      if (onDone) onDone(ok);
+    }
+    function fallback() {
+      var ta = document.createElement("textarea");
+      ta.value = text;
+      ta.style.position = "fixed";
+      ta.style.left = "-9999px";
+      document.body.appendChild(ta);
+      ta.select();
+      var ok = false;
+      try { ok = document.execCommand("copy"); } catch (e) {}
+      document.body.removeChild(ta);
+      finish(ok);
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(function () { finish(true); }, fallback);
+    } else {
+      fallback();
+    }
+  }
+
+  // ---- Copy icons ----
+  var COPY_ICON = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1"/></svg>';
+  var CHECK_ICON = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>';
+
+  Array.prototype.forEach.call(document.querySelectorAll('[data-icon="copy"]'), function (b) {
+    b.innerHTML = COPY_ICON;
+  });
+
+  function showCopied(btn) {
+    btn.innerHTML = CHECK_ICON;
+    btn.classList.add("copied");
+    clearTimeout(btn._copiedTimer);
+    btn._copiedTimer = setTimeout(function () {
+      btn.innerHTML = COPY_ICON;
+      btn.classList.remove("copied");
+    }, 1200);
+  }
+
+  var btnCopyMd = document.getElementById("btnCopyMd");
+  btnCopyMd.addEventListener("click", function () {
+    copyPlain(els.mdInput.value, "Copied Markdown ✓", function (ok) { if (ok) showCopied(btnCopyMd); });
+  });
+  var btnCopyPreview = document.getElementById("btnCopyPreview");
+  btnCopyPreview.addEventListener("click", function () {
+    copyRich(function (ok) { if (ok) showCopied(btnCopyPreview); });
+  });
+
+  // ---- Hover-to-copy for code in the preview ----
+  // One floating button, positioned in viewport coordinates and clamped to the
+  // visible part of the scrolling preview, so it stays on screen even when a
+  // code line overflows horizontally or the block is partly scrolled away.
+  var codeCopyBtn = document.createElement("button");
+  codeCopyBtn.type = "button";
+  codeCopyBtn.className = "code-copy-btn";
+  codeCopyBtn.title = "Copy code";
+  codeCopyBtn.setAttribute("aria-label", "Copy code");
+  codeCopyBtn.innerHTML = COPY_ICON;
+  document.body.appendChild(codeCopyBtn);
+  var codeTarget = null;
+  var CODE_BTN_SIZE = 24;
+
+  function codeElFrom(node) {
+    if (!node || node.nodeType !== 1) return null;
+    var el = node.closest(".preview-content pre, .preview-content code");
+    if (el && el.tagName === "CODE" && el.parentElement && el.parentElement.tagName === "PRE") {
+      el = el.parentElement;
+    }
+    return el;
+  }
+
+  function hideCodeCopy() {
+    codeTarget = null;
+    codeCopyBtn.classList.remove("visible");
+  }
+
+  function showCodeCopy(el) {
+    var scroller = el.closest("#previewWrap, .fullscreen-body");
+    if (!scroller) return;
+    var sr = scroller.getBoundingClientRect();
+    var visLeft = sr.left + scroller.clientLeft;
+    var visTop = sr.top + scroller.clientTop;
+    var visRight = visLeft + scroller.clientWidth;
+    var visBottom = visTop + scroller.clientHeight;
+
+    var isBlock = el.tagName === "PRE";
+    // Inline code can wrap across lines; anchor to its first line fragment.
+    var r = isBlock ? el.getBoundingClientRect() : (el.getClientRects()[0] || el.getBoundingClientRect());
+    var left, top;
+    if (isBlock) {
+      var inset = 6;
+      left = Math.min(r.right, visRight) - CODE_BTN_SIZE - inset;
+      top = Math.max(r.top, visTop) + inset;
+      if (top + CODE_BTN_SIZE > Math.min(r.bottom, visBottom)) { hideCodeCopy(); return; }
+    } else {
+      // Sit on the top-right corner, overlapping the code slightly so the
+      // pointer can move onto the button without leaving the code first.
+      left = Math.min(r.right, visRight) - CODE_BTN_SIZE;
+      top = Math.max(r.top - CODE_BTN_SIZE + 6, visTop);
+    }
+    left = Math.max(left, visLeft);
+
+    codeTarget = el;
+    codeCopyBtn.style.left = left + "px";
+    codeCopyBtn.style.top = top + "px";
+    if (!codeCopyBtn.classList.contains("copied")) codeCopyBtn.innerHTML = COPY_ICON;
+    codeCopyBtn.classList.add("visible");
+  }
+
+  // mousemove rather than mouseover so the button reappears after a scroll
+  // without the pointer having to cross an element boundary first.
+  document.addEventListener("mousemove", function (e) {
+    if (e.target === codeCopyBtn || codeCopyBtn.contains(e.target)) return;
+    var el = codeElFrom(e.target);
+    if (el) { if (el !== codeTarget) showCodeCopy(el); }
+    else if (codeTarget) hideCodeCopy();
+  });
+  document.addEventListener("mouseout", function (e) {
+    if (!e.relatedTarget) hideCodeCopy();
+  });
+  // Scrolling moves the code out from under a fixed-position button.
+  document.addEventListener("scroll", function () { if (codeTarget) hideCodeCopy(); }, true);
+  window.addEventListener("resize", hideCodeCopy);
+
+  codeCopyBtn.addEventListener("click", function () {
+    if (!codeTarget) return;
+    var text = codeTarget.textContent;
+    if (codeTarget.tagName === "PRE") text = text.replace(/\n$/, "");
+    copyPlain(text, "Copied code ✓", function (ok) { if (ok) showCopied(codeCopyBtn); });
+  });
+
+  // ---- Clean up Markdown pasted from a terminal ----
+  var BLOCK_START = /^\s*(#|>|\||[-*+]\s|\d+[.)]\s|```|~~~|<|-{3,}\s*$|={3,}\s*$|\*{3,}\s*$|_{3,}\s*$)/;
+  var FENCE = /^\s*(```|~~~)/;
+
+  function cleanTerminalText(src) {
+    var lines = src.replace(/\r\n?/g, "\n").split("\n").map(function (l) {
+      // Terminals pad lines with trailing spaces, which Markdown reads as <br>.
+      return l.replace(/^ +/, function (m) { return m.replace(/ /g, " "); })
+              .replace(/[ \t ]+$/, "");
+    });
+
+    // Remove indentation shared by every line. The first line is excluded from
+    // the minimum because a selection often starts after the terminal's indent.
+    function indentOf(l) { return l.match(/^ */)[0].length; }
+    var nonBlank = [];
+    lines.forEach(function (l, i) { if (l) nonBlank.push(i); });
+    var rest = nonBlank.length > 1 ? nonBlank.slice(1) : nonBlank;
+    var common = rest.length ? Math.min.apply(null, rest.map(function (i) { return indentOf(lines[i]); })) : 0;
+    if (common > 0) {
+      lines = lines.map(function (l) { return l.slice(Math.min(common, indentOf(l))); });
+    }
+
+    // Rejoin lines the terminal hard-wrapped. A line counts as wrapped when the
+    // next line's first word wouldn't have fit within the widest line (a proxy
+    // for terminal width). Fenced code is left alone — joining there could
+    // merge genuinely separate lines of code.
+    var inFence = false, width = 0;
+    lines.forEach(function (l) {
+      if (FENCE.test(l)) { inFence = !inFence; return; }
+      if (!inFence) width = Math.max(width, l.length);
+    });
+    if (width < 40 || width > 250) return lines.join("\n");
+
+    var out = [];
+    inFence = false;
+    var prevLen = -1; // physical length of the previous prose line, or -1 if it can't be continued
+    lines.forEach(function (l) {
+      if (FENCE.test(l)) { inFence = !inFence; out.push(l); prevLen = -1; return; }
+      if (inFence || !l) { out.push(l); prevLen = -1; return; }
+      var body = l.trim();
+      var firstWord = body.split(/\s+/)[0];
+      if (prevLen >= 0 && !BLOCK_START.test(l) && prevLen + 1 + firstWord.length > width) {
+        out[out.length - 1] += " " + body;
+      } else {
+        out.push(l);
+      }
+      // Wrapped table rows can't be repaired by joining, so never continue one.
+      prevLen = /^\s*\|/.test(l) ? -1 : l.length;
+    });
+    return out.join("\n");
+  }
+
+  document.getElementById("btnCleanup").addEventListener("click", function () {
+    var before = els.mdInput.value;
+    var after = cleanTerminalText(before);
+    if (after === before) { flashStatus("Nothing to clean up"); return; }
+    // insertText keeps the change on the textarea's undo stack (Ctrl+Z).
+    els.mdInput.focus();
+    els.mdInput.select();
+    var ok = false;
+    try { ok = document.execCommand("insertText", false, after); } catch (e) {}
+    if (!ok || els.mdInput.value !== after) els.mdInput.value = after;
+    renderNow();
+    flashStatus("Cleaned up ✓ (Ctrl+Z undoes)");
+  });
 
   document.getElementById("btnCopySource").addEventListener("click", function () {
     var built = buildStandaloneHtml();

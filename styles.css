@@ -197,3 +197,24 @@ footer {
   pointer-events: none;
 }
 #copyStatus.error { color: #dc2626; }
+
+/* Pane header tools (copy, clean up, fullscreen) */
+.pane-tools { display: inline-flex; align-items: center; gap: 4px; }
+.pane-label-row .text-btn {
+  font-size: 11px; padding: 2px 8px; color: var(--ui-muted);
+  text-transform: none; letter-spacing: 0;
+}
+.pane-label-row .text-btn:hover { color: var(--ui-text); }
+.pane-label-row .icon-btn.copied, .code-copy-btn.copied { color: #16a34a; }
+
+/* Floating copy button shown while hovering code in the preview */
+.code-copy-btn {
+  position: fixed; z-index: 200; display: none;
+  width: 24px; height: 24px; padding: 0;
+  align-items: center; justify-content: center;
+  border-radius: 5px; border: 1px solid var(--ui-border);
+  background: rgba(255,255,255,.95); color: var(--ui-muted);
+  box-shadow: 0 1px 3px rgba(0,0,0,.15);
+}
+.code-copy-btn.visible { display: inline-flex; }
+.code-copy-btn:hover { background: #fff; color: var(--ui-text); }

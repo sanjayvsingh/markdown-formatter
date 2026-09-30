@@ -18,6 +18,9 @@ No backend required. It's a static page — paste Markdown, get styled HTML, cop
 - Fullscreen preview modal
 - All settings and your last input persist in the browser (`localStorage`) — nothing is sent anywhere
 - Copy as rich text, copy raw HTML source, or download as a standalone `.html` file
+- Copy icons on each pane: the Markdown pane copies the raw source, the Preview pane copies formatted rich text
+- Hover any code block or inline code in the preview to get a copy button for just that code
+- **Clean up** button for Markdown copied out of a terminal: strips trailing padding (which Markdown would turn into `<br>`), removes indentation shared by every line (which would otherwise turn text into code blocks), and rejoins lines the terminal hard-wrapped. Fenced code is not re-wrapped. Ctrl+Z undoes it.
 
 ## Running it
 

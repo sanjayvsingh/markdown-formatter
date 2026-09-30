@@ -25,14 +25,23 @@
 
 <main>
   <div class="pane" id="leftPane">
-    <div class="pane-label">Markdown input</div>
+    <div class="pane-label pane-label-row">
+      <span>Markdown input</span>
+      <span class="pane-tools">
+        <button id="btnCleanup" class="text-btn" title="Clean up text copied from a terminal: trailing spaces, shared indentation, and hard-wrapped lines">Clean up</button>
+        <button id="btnCopyMd" class="icon-btn" data-icon="copy" title="Copy Markdown" aria-label="Copy Markdown"></button>
+      </span>
+    </div>
     <textarea id="mdInput" placeholder="Paste or type Markdown here, or drag a .md file into this pane…" spellcheck="false"></textarea>
   </div>
   <div class="resizer" id="paneResizer" title="Drag to resize"></div>
   <div class="pane" id="rightPane">
     <div class="pane-label pane-label-row">
       <span>Preview</span>
-      <button id="btnFullscreen" class="icon-btn" title="Fullscreen preview" aria-label="Fullscreen preview">⤢</button>
+      <span class="pane-tools">
+        <button id="btnCopyPreview" class="icon-btn" data-icon="copy" title="Copy formatted preview" aria-label="Copy formatted preview"></button>
+        <button id="btnFullscreen" class="icon-btn" title="Fullscreen preview" aria-label="Fullscreen preview">⤢</button>
+      </span>
     </div>
     <div id="previewWrap"><div id="preview" class="preview-content"></div></div>
   </div>
@@ -126,7 +135,7 @@
   </div>
 </div>
 
-<footer>Drag a .md file onto the input pane to load it. Settings save automatically in this browser. "Copy Rich Text" copies formatted content for pasting into emails.</footer>
+<footer>Drag a .md file onto the input pane to load it. Hover a code block in the preview to copy it. Settings save automatically in this browser. "Copy Rich Text" copies formatted content for pasting into emails.</footer>
 
 <script src="app.js"></script>
 </body>
