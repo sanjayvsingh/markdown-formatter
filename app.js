@@ -406,6 +406,7 @@
         el.style.fontSize = currentSettings.bodySize + "px";
         if (!currentSettings.bodyFgAuto) el.style.color = currentSettings.bodyFg;
         if (!currentSettings.bodyBgAuto) el.style.backgroundColor = currentSettings.bodyBg;
+        if (tag === "TD" || tag === "TH") el.style.overflowWrap = "anywhere";
       }
       Array.prototype.forEach.call(el.children, applyInline);
     }

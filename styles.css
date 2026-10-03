@@ -94,8 +94,9 @@ main {
   line-height: 1.55;
   color: var(--body-fg, inherit);
   background: var(--body-bg, transparent);
-  max-width: 720px;
 }
+/* Keep prose at a readable line length, but let tables use the full pane. */
+.preview-content > :not(table) { max-width: 720px; }
 .preview-content h1, .preview-content h2, .preview-content h3,
 .preview-content h4, .preview-content h5, .preview-content h6 {
   font-family: var(--heading-font);
@@ -134,7 +135,11 @@ main {
 }
 .preview-content pre code { background: none; padding: 0; border: none; }
 .preview-content table { border-collapse: collapse; margin: 1em 0; }
-.preview-content th, .preview-content td { border: 1px solid #ccc; padding: 6px 10px; }
+.preview-content th, .preview-content td {
+  border: 1px solid #ccc; padding: 6px 10px;
+  /* Long URLs, paths and code would otherwise force the table wider than the pane. */
+  overflow-wrap: anywhere;
+}
 .preview-content th { background: #f5f5f5; }
 
 footer {
@@ -182,7 +187,9 @@ footer {
 
 .fullscreen-panel { max-width: min(1100px, 94vw); display: flex; flex-direction: column; max-height: 92vh; }
 .fullscreen-body { flex: 1; overflow: auto; padding: 32px 40px; }
-.fullscreen-body .preview-content { max-width: 800px; margin: 0 auto; }
+.fullscreen-panel:has(.preview-content table) { max-width: min(1600px, 96vw); }
+.fullscreen-body .preview-content > :not(table) { max-width: 800px; margin-left: auto; margin-right: auto; }
+.fullscreen-body .preview-content > table { margin-left: auto; margin-right: auto; }
 
 /* Drag & drop a Markdown file onto the input pane */
 #leftPane { position: relative; }
