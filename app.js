@@ -532,9 +532,8 @@
   btnCopyMd.addEventListener("click", function () {
     copyPlain(els.mdInput.value, "Copied Markdown ✓", function (ok) { if (ok) showCopied(btnCopyMd); });
   });
-  var btnCopyPreview = document.getElementById("btnCopyPreview");
-  btnCopyPreview.addEventListener("click", function () {
-    copyRich(function (ok) { if (ok) showCopied(btnCopyPreview); });
+  document.getElementById("btnCopyUnformatted").addEventListener("click", function () {
+    copyPlain(els.preview.innerText, "Copied unformatted text ✓");
   });
 
   // ---- Hover-to-copy for code in the preview ----
