@@ -269,6 +269,7 @@
   }
   var previewFullscreen = document.getElementById("previewFullscreen");
   var INPUT_KEY = "mdformatter.input.v1";
+  var DEFAULT_TITLE = document.title;
   function renderNow() {
     var clean;
     try {
@@ -284,6 +285,9 @@
     }
     els.preview.innerHTML = clean;
     if (codeTarget) hideCodeCopy();
+    // Mirror the document's title in the browser tab; fall back to the app name.
+    var h1 = els.preview.querySelector("h1");
+    document.title = (h1 && h1.textContent.trim()) || DEFAULT_TITLE;
     // Skip touching the fullscreen copy's DOM while it's hidden — it's re-synced
     // in openFullscreen() instead, so this cost is only ever paid when it's visible.
     if (fullscreenModal.classList.contains("open")) previewFullscreen.innerHTML = clean;
