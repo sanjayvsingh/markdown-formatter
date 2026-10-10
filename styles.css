@@ -146,7 +146,10 @@ footer {
   width: 100%; max-width: var(--shell-max-width); margin: 0 auto;
   padding: 8px 20px; font-size: 11px; color: var(--ui-muted);
   background: var(--ui-panel); border: 1px solid var(--ui-border); border-radius: 10px;
+  display: flex; align-items: baseline; justify-content: space-between; gap: 24px;
 }
+footer a { color: var(--ui-muted); white-space: nowrap; }
+footer a:hover { color: var(--accent); }
 
 @media (max-width: 800px) {
   main { flex-direction: column; }
