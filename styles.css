@@ -225,3 +225,19 @@ footer {
 }
 .code-copy-btn.visible { display: inline-flex; }
 .code-copy-btn:hover { background: #fff; color: var(--ui-text); }
+
+/* Printing: only the rendered preview, flowing across pages instead of scrolling in its pane */
+@media print {
+  header, footer, #leftPane, .resizer, .pane-label, .modal-overlay, .code-copy-btn { display: none !important; }
+  html, body { height: auto; background: #fff; }
+  body { display: block; padding: 0; }
+  main { display: block; max-width: none; }
+  .pane { display: block; border: none; border-radius: 0; box-shadow: none; overflow: visible; }
+  #previewWrap { overflow: visible; padding: 0; }
+  .preview-content > :not(table) { max-width: none; }
+  /* Nothing can scroll on paper, so wrap long code lines rather than clipping them. */
+  .preview-content pre { overflow: visible; white-space: pre-wrap; overflow-wrap: anywhere; }
+  .preview-content pre, .preview-content blockquote, .preview-content tr, .preview-content img { break-inside: avoid; }
+  .preview-content h1, .preview-content h2, .preview-content h3,
+  .preview-content h4, .preview-content h5, .preview-content h6 { break-after: avoid; }
+}
