@@ -375,9 +375,9 @@
   });
 
   // ---- Build a standalone, inline-styled HTML document from current preview ----
-  function buildStandaloneHtml() {
-    var clone = els.preview.cloneNode(true);
-
+  // Bakes the current font/color settings into `root` and everything under it
+  // as inline styles, which is what survives pasting into an email client.
+  function applyInlineStyles(root) {
     function applyInline(el) {
       var tag = el.tagName;
       if (/^H[1-6]$/.test(tag)) {
@@ -414,14 +414,19 @@
       }
       Array.prototype.forEach.call(el.children, applyInline);
     }
-    Array.prototype.forEach.call(clone.children, applyInline);
+    Array.prototype.forEach.call(root.children, applyInline);
 
-    clone.style.fontFamily = currentSettings.bodyFont;
-    clone.style.fontSize = currentSettings.bodySize + "px";
-    clone.style.lineHeight = "1.55";
-    if (!currentSettings.bodyFgAuto) clone.style.color = currentSettings.bodyFg;
-    if (!currentSettings.bodyBgAuto) clone.style.backgroundColor = currentSettings.bodyBg;
-    clone.style.maxWidth = "720px";
+    root.style.fontFamily = currentSettings.bodyFont;
+    root.style.fontSize = currentSettings.bodySize + "px";
+    root.style.lineHeight = "1.55";
+    if (!currentSettings.bodyFgAuto) root.style.color = currentSettings.bodyFg;
+    if (!currentSettings.bodyBgAuto) root.style.backgroundColor = currentSettings.bodyBg;
+    root.style.maxWidth = "720px";
+  }
+
+  function buildStandaloneHtml() {
+    var clone = els.preview.cloneNode(true);
+    applyInlineStyles(clone);
 
     var titleEl = els.preview.querySelector("h1");
     var title = titleEl ? titleEl.textContent.trim() : "Document";
@@ -450,27 +455,27 @@
     }, 2200);
   }
 
-  function copyRich(onDone) {
-    var built = buildStandaloneHtml();
-    var plain = els.preview.textContent;
+  function copyRich(html, plain, okMsg, onDone) {
     try {
       var item = new ClipboardItem({
-        "text/html": new Blob([built.bodyHtml], { type: "text/html" }),
+        "text/html": new Blob([html], { type: "text/html" }),
         "text/plain": new Blob([plain], { type: "text/plain" })
       });
       navigator.clipboard.write([item]).then(function () {
-        flashStatus("Copied rich text ✓");
+        flashStatus(okMsg);
         if (onDone) onDone(true);
       }, function () {
-        fallbackCopyRich(built.bodyHtml, onDone);
+        fallbackCopyRich(html, okMsg, onDone);
       });
     } catch (e) {
-      fallbackCopyRich(built.bodyHtml, onDone);
+      fallbackCopyRich(html, okMsg, onDone);
     }
   }
-  document.getElementById("btnCopyRich").addEventListener("click", function () { copyRich(); });
+  document.getElementById("btnCopyRich").addEventListener("click", function () {
+    copyRich(buildStandaloneHtml().bodyHtml, els.preview.textContent, "Copied rich text ✓");
+  });
 
-  function fallbackCopyRich(html, onDone) {
+  function fallbackCopyRich(html, okMsg, onDone) {
     var container = document.createElement("div");
     container.contentEditable = true;
     container.style.position = "fixed";
@@ -484,7 +489,7 @@
     sel.addRange(range);
     var ok = false;
     try { ok = document.execCommand("copy"); } catch (e) {}
-    flashStatus(ok ? "Copied rich text ✓" : "Copy failed", !ok);
+    flashStatus(ok ? okMsg : "Copy failed", !ok);
     sel.removeAllRanges();
     document.body.removeChild(container);
     if (onDone) onDone(ok);
@@ -540,15 +545,15 @@
     copyPlain(els.preview.innerText, "Copied unformatted text ✓");
   });
 
-  // ---- Hover-to-copy for code in the preview ----
+  // ---- Hover-to-copy for code and quotes in the preview ----
   // One floating button, positioned in viewport coordinates and clamped to the
   // visible part of the scrolling preview, so it stays on screen even when a
   // code line overflows horizontally or the block is partly scrolled away.
+  // Over code it copies the code as plain text; elsewhere in a blockquote it
+  // copies the quote's formatted contents without the quote itself.
   var codeCopyBtn = document.createElement("button");
   codeCopyBtn.type = "button";
   codeCopyBtn.className = "code-copy-btn";
-  codeCopyBtn.title = "Copy code";
-  codeCopyBtn.setAttribute("aria-label", "Copy code");
   codeCopyBtn.innerHTML = COPY_ICON;
   document.body.appendChild(codeCopyBtn);
   var codeTarget = null;
@@ -561,6 +566,28 @@
       el = el.parentElement;
     }
     return el;
+  }
+
+  // Quotes separated only by a blank line render as separate blockquotes, so
+  // treat a run of adjacent ones as a single quote. Nested quotes belong to
+  // their outermost ancestor.
+  function quoteGroup(bq) {
+    var first = bq, group = [];
+    while (first.previousElementSibling && first.previousElementSibling.tagName === "BLOCKQUOTE") {
+      first = first.previousElementSibling;
+    }
+    for (var n = first; n && n.tagName === "BLOCKQUOTE"; n = n.nextElementSibling) group.push(n);
+    return group;
+  }
+
+  // Returns the first blockquote of the quote under `node`, so that every part
+  // of the same quote maps to the same hover target.
+  function quoteElFrom(node) {
+    if (!node || node.nodeType !== 1) return null;
+    var bq = node.closest(".preview-content blockquote");
+    if (!bq) return null;
+    for (var outer; (outer = bq.parentElement.closest(".preview-content blockquote")); ) bq = outer;
+    return quoteGroup(bq)[0];
   }
 
   function hideCodeCopy() {
@@ -577,9 +604,17 @@
     var visRight = visLeft + scroller.clientWidth;
     var visBottom = visTop + scroller.clientHeight;
 
-    var isBlock = el.tagName === "PRE";
-    // Inline code can wrap across lines; anchor to its first line fragment.
-    var r = isBlock ? el.getBoundingClientRect() : (el.getClientRects()[0] || el.getBoundingClientRect());
+    var isQuote = el.tagName === "BLOCKQUOTE";
+    var isBlock = isQuote || el.tagName === "PRE";
+    var r;
+    if (isQuote) {
+      var group = quoteGroup(el);
+      var firstRect = el.getBoundingClientRect();
+      r = { top: firstRect.top, right: firstRect.right, bottom: group[group.length - 1].getBoundingClientRect().bottom };
+    } else {
+      // Inline code can wrap across lines; anchor to its first line fragment.
+      r = isBlock ? el.getBoundingClientRect() : (el.getClientRects()[0] || el.getBoundingClientRect());
+    }
     var left, top;
     if (isBlock) {
       var inset = 6;
@@ -594,6 +629,10 @@
     }
     left = Math.max(left, visLeft);
 
+    var label = isQuote ? "Copy quote contents (without the quote formatting)" : "Copy code";
+    codeCopyBtn.title = label;
+    codeCopyBtn.setAttribute("aria-label", label);
+
     codeTarget = el;
     codeCopyBtn.style.left = left + "px";
     codeCopyBtn.style.top = top + "px";
@@ -605,7 +644,7 @@
   // without the pointer having to cross an element boundary first.
   document.addEventListener("mousemove", function (e) {
     if (e.target === codeCopyBtn || codeCopyBtn.contains(e.target)) return;
-    var el = codeElFrom(e.target);
+    var el = codeElFrom(e.target) || quoteElFrom(e.target);
     if (el) { if (el !== codeTarget) showCodeCopy(el); }
     else if (codeTarget) hideCodeCopy();
   });
@@ -618,6 +657,17 @@
 
   codeCopyBtn.addEventListener("click", function () {
     if (!codeTarget) return;
+    if (codeTarget.tagName === "BLOCKQUOTE") {
+      var group = quoteGroup(codeTarget);
+      var holder = document.createElement("div");
+      group.forEach(function (bq) {
+        Array.prototype.forEach.call(bq.childNodes, function (n) { holder.appendChild(n.cloneNode(true)); });
+      });
+      applyInlineStyles(holder);
+      var plain = group.map(function (bq) { return bq.innerText.trim(); }).join("\n\n");
+      copyRich(holder.outerHTML, plain, "Copied quote ✓", function (ok) { if (ok) showCopied(codeCopyBtn); });
+      return;
+    }
     var text = codeTarget.textContent;
     if (codeTarget.tagName === "PRE") text = text.replace(/\n$/, "");
     copyPlain(text, "Copied code ✓", function (ok) { if (ok) showCopied(codeCopyBtn); });
