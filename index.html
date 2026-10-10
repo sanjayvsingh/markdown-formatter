@@ -51,7 +51,12 @@
   <div class="modal-panel fullscreen-panel">
     <div class="modal-panel-header">
       <h2>Preview</h2>
-      <button id="btnCloseFullscreen" class="icon-btn" aria-label="Close">✕</button>
+      <span class="fs-tools">
+        <button id="btnFsSmaller" class="icon-btn" title="Smaller text" aria-label="Smaller text">A−</button>
+        <span id="fsZoomLevel" aria-live="polite">100%</span>
+        <button id="btnFsLarger" class="icon-btn" title="Larger text" aria-label="Larger text">A+</button>
+        <button id="btnCloseFullscreen" class="icon-btn" aria-label="Close">✕</button>
+      </span>
     </div>
     <div class="fullscreen-body">
       <div id="previewFullscreen" class="preview-content"></div>

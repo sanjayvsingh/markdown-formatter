@@ -190,6 +190,12 @@ footer {
 .fullscreen-panel:has(.preview-content table) { max-width: min(1600px, 96vw); }
 .fullscreen-body .preview-content > :not(table) { max-width: 800px; margin-left: auto; margin-right: auto; }
 .fullscreen-body .preview-content > table { margin-left: auto; margin-right: auto; }
+/* Text size controls in the fullscreen header */
+.fs-tools { display: inline-flex; align-items: center; gap: 6px; }
+.fs-tools #btnFsSmaller, .fs-tools #btnFsLarger { font-size: 13px; font-weight: 600; }
+.fs-tools #btnCloseFullscreen { margin-left: 10px; }
+.fs-tools button:disabled { opacity: .4; cursor: not-allowed; }
+#fsZoomLevel { min-width: 40px; text-align: center; font-size: 12px; color: var(--ui-muted); font-variant-numeric: tabular-nums; }
 
 /* Drag & drop a Markdown file onto the input pane */
 #leftPane { position: relative; }

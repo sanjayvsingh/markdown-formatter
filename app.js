@@ -698,8 +698,26 @@
     });
   });
 
+  // Text size in the fullscreen preview, for screen sharing. Deliberately not
+  // persisted: it resets to 100% every time the preview is opened.
+  var FS_ZOOM_MIN = 50, FS_ZOOM_MAX = 300, FS_ZOOM_STEP = 10;
+  var fsZoom = 100;
+  var btnFsSmaller = document.getElementById("btnFsSmaller");
+  var btnFsLarger = document.getElementById("btnFsLarger");
+  var fsZoomLevel = document.getElementById("fsZoomLevel");
+  function setFsZoom(pct) {
+    fsZoom = Math.max(FS_ZOOM_MIN, Math.min(FS_ZOOM_MAX, pct));
+    previewFullscreen.style.zoom = fsZoom === 100 ? "" : fsZoom / 100;
+    fsZoomLevel.textContent = fsZoom + "%";
+    btnFsSmaller.disabled = fsZoom <= FS_ZOOM_MIN;
+    btnFsLarger.disabled = fsZoom >= FS_ZOOM_MAX;
+  }
+  btnFsSmaller.addEventListener("click", function () { setFsZoom(fsZoom - FS_ZOOM_STEP); });
+  btnFsLarger.addEventListener("click", function () { setFsZoom(fsZoom + FS_ZOOM_STEP); });
+
   function openFullscreen() {
     previewFullscreen.innerHTML = els.preview.innerHTML;
+    setFsZoom(100);
     fullscreenModal.classList.add("open");
   }
   function closeFullscreen() { fullscreenModal.classList.remove("open"); }
