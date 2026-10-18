@@ -16,6 +16,7 @@ No backend required. It's a static page — paste Markdown, get styled HTML, cop
 - Optional text and background colors per category, each with an **Automatic** toggle — when on, no color is applied at all, so the destination (email client, dark mode, Kindle) uses its own default instead of a forced color
 - Draggable divider to resize the input/preview split
 - Fullscreen preview modal
+- Dark mode: Settings → Theme offers System (follows your system's light/dark setting; the default), Light or Dark, remembered in this browser. Copied, downloaded and printed output always uses your chosen colors, never the dark theme.
 - All settings and your last input persist in the browser (`localStorage`) — nothing is sent anywhere
 - Copy as rich text, copy as unformatted text, or copy the raw HTML source
 - Download buttons (icons in the header): a Word `.docx` file or a standalone `.html` file. The Word file is built in the browser and keeps your fonts, sizes and colors; headings and lists become real Word headings and lists, and links stay clickable. Images are not embedded (their alt text is kept).
@@ -35,16 +36,32 @@ python serve.py [port]   # defaults to 8000, binds 127.0.0.1
 
 The Clipboard API that "Copy Rich Text" depends on requires a secure context — serve over HTTPS (or `localhost`) for it to work.
 
+Pasting into Word: if fonts and colors disappear, Word is set to merge pasted text with the document's formatting. Choose **Keep Source Formatting** from the paste options, or set it as the default under File → Options → Advanced → *Pasting from other programs*.
+
+## Tests
+
+Automated tests use Node's built-in test runner, with [jsdom](https://github.com/jsdom/jsdom) standing in for the browser. They need Node 22 or newer:
+
+```
+npm install   # once, installs jsdom
+npm test
+```
+
+`test/app.test.js` loads the real page and covers rendering and sanitizing, the copy buttons, Clean up, both downloads, settings and the theme setting. `test/docx.test.js` unzips the Word file and checks every part is well-formed XML with the expected headings, lists, links, tables and styles. Node and jsdom are only needed for testing; the app itself has no build step or dependencies.
+
 ## Files
 
 ```
 index.html       — structure
-styles.css        — all styling
+styles.css        — all styling, including the dark theme
+theme.js          — light/dark theme switching (loaded early to avoid a flash of the wrong theme)
 app.js            — application logic
 marked.min.js     — Markdown parser (vendored, MIT)
 purify.min.js     — DOMPurify, sanitizes rendered HTML before display (vendored, Apache-2.0/MPL-2.0)
 docx.js           — builds the Word download in the browser (no dependencies)
 serve.py          — static file server with security headers
+test/             — automated tests (not needed to run the app)
+package.json      — test runner setup (not needed to run the app)
 ```
 
 Third-party libraries are vendored locally rather than loaded from a CDN, so the app has no runtime dependency on any external host.

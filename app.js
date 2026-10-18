@@ -480,6 +480,10 @@
     container.contentEditable = true;
     container.style.position = "fixed";
     container.style.left = "-9999px";
+    // execCommand copies computed colours too, so keep the dark theme's light
+    // text from leaking into what gets pasted.
+    container.style.color = "#222";
+    container.style.backgroundColor = "#fff";
     container.innerHTML = html;
     document.body.appendChild(container);
     var range = document.createRange();

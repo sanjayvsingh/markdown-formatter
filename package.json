@@ -1,0 +1,11 @@
+{
+  "name": "markdown-formatter",
+  "private": true,
+  "description": "Static Markdown-to-styled-HTML formatter. The app needs no build or install; this file is only for running the tests.",
+  "scripts": {
+    "test": "node --test \"test/*.test.js\""
+  },
+  "devDependencies": {
+    "jsdom": "24.1.3"
+  }
+}

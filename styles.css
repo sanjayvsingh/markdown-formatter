@@ -1,11 +1,71 @@
 :root {
+  color-scheme: light;
   --ui-bg: #c7c7c3;
   --ui-panel: #ffffff;
   --ui-border: #ddd;
   --ui-text: #222;
   --ui-muted: #666;
+  --ui-input: #fff;
+  --ui-hover: #f0f0f0;
+  --ui-float: rgba(255,255,255,.95);
+  --ui-shadow: rgba(0,0,0,.08);
   --accent: #2563eb;
+  --on-accent: #fff;
+  --success: #16a34a;
+  --error: #dc2626;
+  /* Rendered preview content */
+  --content-bg: #fff;
+  --quote-text: #555;
+  --rule: #ccc;
+  --th-bg: #f5f5f5;
   --shell-max-width: 1600px;
+}
+/* Dark theme (screen only, so printing always uses the light colours): follows
+   the OS unless theme.js has set data-theme="light". The same values are
+   repeated for an explicit data-theme="dark" choice. */
+@media screen and (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --ui-bg: #111214;
+    --ui-panel: #1e1f22;
+    --ui-border: #36383d;
+    --ui-text: #e4e4e4;
+    --ui-muted: #9a9ca1;
+    --ui-input: #26272b;
+    --ui-hover: #2e3035;
+    --ui-float: rgba(46,48,53,.95);
+    --ui-shadow: rgba(0,0,0,.4);
+    --accent: #60a5fa;
+    --on-accent: #111214;
+    --success: #4ade80;
+    --error: #f87171;
+    --content-bg: #1e1f22;
+    --quote-text: #a8aaaf;
+    --rule: #4a4d53;
+    --th-bg: #2a2c30;
+  }
+}
+@media screen {
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --ui-bg: #111214;
+    --ui-panel: #1e1f22;
+    --ui-border: #36383d;
+    --ui-text: #e4e4e4;
+    --ui-muted: #9a9ca1;
+    --ui-input: #26272b;
+    --ui-hover: #2e3035;
+    --ui-float: rgba(46,48,53,.95);
+    --ui-shadow: rgba(0,0,0,.4);
+    --accent: #60a5fa;
+    --on-accent: #111214;
+    --success: #4ade80;
+    --error: #f87171;
+    --content-bg: #1e1f22;
+    --quote-text: #a8aaaf;
+    --rule: #4a4d53;
+    --th-bg: #2a2c30;
+  }
 }
 * { box-sizing: border-box; }
 html, body {
@@ -21,7 +81,7 @@ header {
   background: var(--ui-panel);
   border: 1px solid var(--ui-border);
   border-radius: 10px;
-  box-shadow: 0 1px 3px rgba(0,0,0,.08);
+  box-shadow: 0 1px 3px var(--ui-shadow);
   display: flex; flex-wrap: wrap; gap: 14px 24px;
   align-items: flex-end;
 }
@@ -38,7 +98,7 @@ header h1 { font-size: 15px; margin: 0 24px 0 0; font-weight: 600; align-self: c
 .ctrl-row { display: flex; gap: 6px; align-items: center; }
 select, input[type=number], input[type=text] {
   font-size: 13px; padding: 4px 6px; border: 1px solid var(--ui-border); border-radius: 4px;
-  background: #fff; color: var(--ui-text);
+  background: var(--ui-input); color: var(--ui-text);
 }
 input[type=number] { width: 58px; }
 .custom-font-input { width: 140px; display: none; }
@@ -46,10 +106,10 @@ input[type=number] { width: 58px; }
 .actions { margin-left: auto; display: flex; gap: 8px; align-items: flex-end; flex-wrap: wrap; }
 button {
   font-size: 13px; padding: 7px 12px; border: 1px solid var(--ui-border); border-radius: 5px;
-  background: #fff; cursor: pointer; color: var(--ui-text);
+  background: var(--ui-input); cursor: pointer; color: var(--ui-text);
 }
-button:hover { background: #f0f0f0; }
-#copyStatus { font-size: 12px; color: #16a34a; align-self: center; min-width: 90px; }
+button:hover { background: var(--ui-hover); }
+#copyStatus { font-size: 12px; color: var(--success); align-self: center; min-width: 90px; }
 
 main {
   flex: 1; display: flex; min-height: 0;
@@ -58,7 +118,7 @@ main {
 .pane {
   flex: 1 1 0; min-width: 0; display: flex; flex-direction: column;
   background: var(--ui-panel); border: 1px solid var(--ui-border);
-  border-radius: 10px; box-shadow: 0 1px 3px rgba(0,0,0,.08); overflow: hidden;
+  border-radius: 10px; box-shadow: 0 1px 3px var(--ui-shadow); overflow: hidden;
 }
 .resizer {
   flex: 0 0 20px; display: flex; align-items: center; justify-content: center;
@@ -77,13 +137,13 @@ main {
 .pane-label-row .icon-btn {
   width: 24px; height: 24px; font-size: 13px; color: var(--ui-muted);
 }
-.pane-label-row .icon-btn:hover { background: #f0f0f0; color: var(--ui-text); }
+.pane-label-row .icon-btn:hover { background: var(--ui-hover); color: var(--ui-text); }
 #mdInput {
   flex: 1; border: none; outline: none; resize: none; padding: 16px;
   font-family: Consolas, Menlo, monospace; font-size: 13.5px; line-height: 1.5;
-  background: #fff;
+  background: var(--content-bg); color: var(--ui-text);
 }
-#previewWrap { flex: 1; overflow: auto; background: #fff; padding: 24px 32px; }
+#previewWrap { flex: 1; overflow: auto; background: var(--content-bg); padding: 24px 32px; }
 
 /* Rendered content styles, driven by CSS variables.
    --x-fg/--x-bg are only set when a category's color is NOT "Automatic";
@@ -115,11 +175,11 @@ main {
 .preview-content p, .preview-content li, .preview-content blockquote { margin: .6em 0; }
 .preview-content ul, .preview-content ol { padding-left: 1.4em; }
 .preview-content blockquote {
-  border-left: 3px solid #ccc; margin-left: 0; padding-left: 1em; color: #555;
+  border-left: 3px solid var(--rule); margin-left: 0; padding-left: 1em; color: var(--quote-text);
 }
 .preview-content a { color: var(--accent); }
 .preview-content img { max-width: 100%; }
-.preview-content hr { border: none; border-top: 1px solid #ccc; margin: 2em 0; }
+.preview-content hr { border: none; border-top: 1px solid var(--rule); margin: 2em 0; }
 .preview-content code, .preview-content pre, .preview-content pre code {
   font-family: var(--mono-font);
   font-size: var(--mono-size);
@@ -136,11 +196,11 @@ main {
 .preview-content pre code { background: none; padding: 0; border: none; }
 .preview-content table { border-collapse: collapse; margin: 1em 0; }
 .preview-content th, .preview-content td {
-  border: 1px solid #ccc; padding: 6px 10px;
+  border: 1px solid var(--rule); padding: 6px 10px;
   /* Long URLs, paths and code would otherwise force the table wider than the pane. */
   overflow-wrap: anywhere;
 }
-.preview-content th { background: #f5f5f5; }
+.preview-content th { background: var(--th-bg); }
 
 footer {
   width: 100%; max-width: var(--shell-max-width); margin: 0 auto;
@@ -212,7 +272,7 @@ footer a:hover { color: var(--accent); }
   color: var(--accent); font-size: 13px; font-weight: 600;
   pointer-events: none;
 }
-#copyStatus.error { color: #dc2626; }
+#copyStatus.error { color: var(--error); }
 
 /* Pane header tools (copy, clean up, fullscreen) */
 .pane-tools { display: inline-flex; align-items: center; gap: 4px; }
@@ -221,7 +281,7 @@ footer a:hover { color: var(--accent); }
   text-transform: none; letter-spacing: 0;
 }
 .pane-label-row .text-btn:hover { color: var(--ui-text); }
-.pane-label-row .icon-btn.copied, .code-copy-btn.copied { color: #16a34a; }
+.pane-label-row .icon-btn.copied, .code-copy-btn.copied { color: var(--success); }
 
 /* Floating copy button shown while hovering code in the preview */
 .code-copy-btn {
@@ -229,11 +289,11 @@ footer a:hover { color: var(--accent); }
   width: 24px; height: 24px; padding: 0;
   align-items: center; justify-content: center;
   border-radius: 5px; border: 1px solid var(--ui-border);
-  background: rgba(255,255,255,.95); color: var(--ui-muted);
+  background: var(--ui-float); color: var(--ui-muted);
   box-shadow: 0 1px 3px rgba(0,0,0,.15);
 }
 .code-copy-btn.visible { display: inline-flex; }
-.code-copy-btn:hover { background: #fff; color: var(--ui-text); }
+.code-copy-btn:hover { background: var(--ui-input); color: var(--ui-text); }
 
 /* Printing: only the rendered preview, flowing across pages instead of scrolling in its pane */
 @media print {
@@ -250,3 +310,19 @@ footer a:hover { color: var(--accent); }
   .preview-content h1, .preview-content h2, .preview-content h3,
   .preview-content h4, .preview-content h5, .preview-content h6 { break-after: avoid; }
 }
+
+/* Theme choice in Settings: a segmented System / Light / Dark control */
+.segmented {
+  display: inline-flex; align-self: flex-start;
+  border: 1px solid var(--ui-border); border-radius: 6px; overflow: hidden;
+}
+.segmented label {
+  position: relative; padding: 5px 14px; cursor: pointer; user-select: none;
+  font-size: 13px; color: var(--ui-text); text-transform: none; letter-spacing: 0;
+  background: var(--ui-input);
+}
+.segmented label + label { border-left: 1px solid var(--ui-border); }
+.segmented label:hover { background: var(--ui-hover); }
+.segmented input { position: absolute; opacity: 0; pointer-events: none; }
+.segmented label:has(input:checked) { background: var(--accent); color: var(--on-accent); }
+.segmented label:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; z-index: 1; }
