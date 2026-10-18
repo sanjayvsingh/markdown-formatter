@@ -48,14 +48,16 @@ describe("copying", () => {
     const { $, clipboard } = await loadApp({ input: "# Title\n\nBody `code`", settings: CUSTOM });
     $("btnCopyRich").click();
     await tick();
+    // Multi-word font names may be quoted, which shows as &quot; inside the attribute.
+    const q = '(?:"|&quot;)?';
     const h1 = clipboard.html.match(/<h1 style="([^"]*)"/)[1];
-    assert.match(h1, /font-family: "?Palatino Linotype"?/);
+    assert.match(h1, new RegExp("font-family: " + q + "Palatino Linotype" + q));
     assert.match(h1, /font-size: 30px/);
     assert.match(h1, /color: rgb\(170, 0, 0\)/);
     const p = clipboard.html.match(/<p style="([^"]*)"/)[1];
-    assert.match(p, /font-family: "?Comic Sans MS"?/);
+    assert.match(p, new RegExp("font-family: " + q + "Comic Sans MS" + q));
     assert.match(p, /color: rgb\(0, 0, 170\)/);
-    assert.match(clipboard.html, /<code style="[^"]*font-family: "?Courier New"?/);
+    assert.match(clipboard.html, new RegExp("<code style=\"[^\"]*font-family: " + q + "Courier New"));
     assert.match(clipboard.text, /Title/);
   });
 

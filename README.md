@@ -40,7 +40,7 @@ Pasting into Word: if fonts and colors disappear, Word is set to merge pasted te
 
 ## Tests
 
-Automated tests use Node's built-in test runner, with [jsdom](https://github.com/jsdom/jsdom) standing in for the browser. They need Node 22 or newer:
+Automated tests use Node's built-in test runner, with [jsdom](https://github.com/jsdom/jsdom) standing in for the browser. They need Node 22.22.2+ or 24.15+ (what the current jsdom supports):
 
 ```
 npm install   # once, installs jsdom
@@ -56,17 +56,17 @@ index.html       — structure
 styles.css        — all styling, including the dark theme
 theme.js          — light/dark theme switching (loaded early to avoid a flash of the wrong theme)
 app.js            — application logic
-marked.min.js     — Markdown parser (vendored, MIT)
-purify.min.js     — DOMPurify, sanitizes rendered HTML before display (vendored, Apache-2.0/MPL-2.0)
+marked.min.js     — Markdown parser, marked 18.1.1 (vendored from the package's lib/marked.umd.js, MIT)
+purify.min.js     — DOMPurify 3.4.17, sanitizes rendered HTML before display (vendored, Apache-2.0/MPL-2.0)
 docx.js           — builds the Word download in the browser (no dependencies)
 serve.py          — static file server with security headers
 test/             — automated tests (not needed to run the app)
 package.json      — test runner setup (not needed to run the app)
 ```
 
-Third-party libraries are vendored locally rather than loaded from a CDN, so the app has no runtime dependency on any external host.
+Third-party libraries are vendored locally rather than loaded from a CDN, so the app has no runtime dependency on any external host. To update one, replace the file with the new release (checking it matches the npm package), compare the rendered output before and after, and run `npm test`.
 
-The Word, HTML, settings and fullscreen icons are from [Font Awesome Free](https://fontawesome.com) 7.1.0 ([CC BY 4.0](https://fontawesome.com/license/free)), inlined as SVG in `index.html`.
+The Word, HTML, settings and fullscreen icons are from [Font Awesome Free](https://fontawesome.com) 7.3.1 ([CC BY 4.0](https://fontawesome.com/license/free)), inlined as SVG in `index.html`.
 
 ## Security notes
 

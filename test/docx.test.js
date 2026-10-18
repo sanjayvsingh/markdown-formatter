@@ -57,13 +57,13 @@ describe("Word export", () => {
     const doc = (await wordFor(SAMPLE)).files["word/document.xml"];
     assert.match(doc, /<w:pStyle w:val="Heading1"\/>.*Trip Notes &amp; Plans/);
     assert.match(doc, /<w:pBdr><w:left [^>]*\/><\/w:pBdr>.*Quoted/);
-    assert.match(doc, /<w:pStyle w:val="CodeBlock"\/>.*line one<\/w:t><w:br\/><w:t xml:space="preserve"> +indented &lt;tag&gt;/);
+    assert.match(doc, /<w:pStyle w:val="CodeBlock"\/>.*line one<\/w:t><w:br\/><w:tab\/><w:t xml:space="preserve">indented &lt;tag&gt;/);
     assert.match(doc, /<w:pStyle w:val="HorizontalRule"\/>/);
     assert.match(doc, /<w:tbl>.*<w:tblHeader\/>.*Left.*<w:jc w:val="right"\/>.*Right/);
   });
 
   test("turns tabs in code into Word tabs", async () => {
-    // marked expands tabs in fenced code, so use a raw <pre> to reach docx.js with one.
+    // Raw HTML, so this checks docx.js itself rather than how marked handles tabs.
     const doc = (await wordFor("<pre>a\tb</pre>")).files["word/document.xml"];
     assert.match(doc, /<w:t xml:space="preserve">a<\/w:t><w:tab\/><w:t xml:space="preserve">b</);
   });

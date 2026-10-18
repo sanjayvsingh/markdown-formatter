@@ -404,6 +404,7 @@
           el.style.padding = "12px 14px";
           el.style.borderRadius = "6px";
           el.style.overflowX = "auto";
+          el.style.tabSize = "4";
         }
       } else {
         el.style.fontFamily = currentSettings.bodyFont;
