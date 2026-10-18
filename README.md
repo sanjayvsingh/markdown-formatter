@@ -5,9 +5,9 @@ A single-page tool that renders pasted Markdown (or plain text) to styled HTML, 
 Two use cases drove the design:
 
 - **Formatted emails** — "Copy Rich Text" copies the rendered content to your clipboard with fonts/colors baked in as inline styles, which is what survives pasting into Gmail, Outlook, etc.
-- **Push to Kindle** — the fullscreen preview (⤢) gives a clean, distraction-free reading view.
+- **Push to Kindle** — the fullscreen preview (the expand icon on the Preview pane) gives a clean, distraction-free reading view.
 
-No backend required. It's a static page — paste Markdown, get styled HTML, copy or download it.
+No backend required. It's a static page — paste Markdown, get styled HTML, copy it, or download it as HTML or a Word document.
 
 ## Features
 
@@ -17,8 +17,9 @@ No backend required. It's a static page — paste Markdown, get styled HTML, cop
 - Draggable divider to resize the input/preview split
 - Fullscreen preview modal
 - All settings and your last input persist in the browser (`localStorage`) — nothing is sent anywhere
-- Copy as rich text, copy raw HTML source, or download as a standalone `.html` file
-- Copy icons on each pane: the Markdown pane copies the raw source, the Preview pane copies formatted rich text
+- Copy as rich text, copy as unformatted text, or copy the raw HTML source
+- Download buttons (icons in the header): a Word `.docx` file or a standalone `.html` file. The Word file is built in the browser and keeps your fonts, sizes and colors; headings and lists become real Word headings and lists, and links stay clickable. Images are not embedded (their alt text is kept).
+- Copy icon on the Markdown pane copies the raw source
 - Hover any code block or inline code in the preview to get a copy button for just that code
 - **Clean up** button for Markdown copied out of a terminal: strips trailing padding (which Markdown would turn into `<br>`), removes indentation shared by every line (which would otherwise turn text into code blocks), and rejoins lines the terminal hard-wrapped. Fenced code is not re-wrapped. Ctrl+Z undoes it.
 
@@ -42,10 +43,13 @@ styles.css        — all styling
 app.js            — application logic
 marked.min.js     — Markdown parser (vendored, MIT)
 purify.min.js     — DOMPurify, sanitizes rendered HTML before display (vendored, Apache-2.0/MPL-2.0)
+docx.js           — builds the Word download in the browser (no dependencies)
 serve.py          — static file server with security headers
 ```
 
 Third-party libraries are vendored locally rather than loaded from a CDN, so the app has no runtime dependency on any external host.
+
+The Word, HTML, settings and fullscreen icons are from [Font Awesome Free](https://fontawesome.com) 7.1.0 ([CC BY 4.0](https://fontawesome.com/license/free)), inlined as SVG in `index.html`.
 
 ## Security notes
 

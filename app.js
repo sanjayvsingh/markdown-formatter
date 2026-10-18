@@ -780,18 +780,27 @@
     if (e.key === "Escape" && fullscreenModal.classList.contains("open")) closeFullscreen();
   });
 
-  document.getElementById("btnDownload").addEventListener("click", function () {
-    var built = buildStandaloneHtml();
-    var safeName = (built.title || "document").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") || "document";
-    var blob = new Blob([built.fullHtml], { type: "text/html" });
+  function downloadBlob(blob, title, ext) {
+    var safeName = (title || "document").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") || "document";
     var url = URL.createObjectURL(blob);
     var a = document.createElement("a");
     a.href = url;
-    a.download = safeName + ".html";
+    a.download = safeName + ext;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+  }
+
+  document.getElementById("btnDownload").addEventListener("click", function () {
+    var built = buildStandaloneHtml();
+    downloadBlob(new Blob([built.fullHtml], { type: "text/html" }), built.title, ".html");
+  });
+
+  document.getElementById("btnDownloadWord").addEventListener("click", function () {
+    var titleEl = els.preview.querySelector("h1");
+    var title = titleEl ? titleEl.textContent.trim() : "Document";
+    downloadBlob(buildDocx(els.preview, currentSettings, title), title, ".docx");
   });
 
 })();
