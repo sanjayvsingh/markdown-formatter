@@ -138,8 +138,10 @@ main {
   width: 24px; height: 24px; font-size: 13px; color: var(--ui-muted);
 }
 .pane-label-row .icon-btn:hover { background: var(--ui-hover); color: var(--ui-text); }
+/* The textarea sits in a wrapper so the copy button can float over its corner */
+.input-wrap { flex: 1; display: flex; position: relative; min-height: 0; }
 #mdInput {
-  flex: 1; border: none; outline: none; resize: none; padding: 16px;
+  flex: 1; min-width: 0; border: none; outline: none; resize: none; padding: 16px;
   font-family: Consolas, Menlo, monospace; font-size: 13.5px; line-height: 1.5;
   background: var(--content-bg); color: var(--ui-text);
 }
@@ -274,14 +276,15 @@ footer a:hover { color: var(--accent); }
 }
 #copyStatus.error { color: var(--error); }
 
-/* Pane header tools (copy, clean up, fullscreen) */
+/* Pane header tools (paste, open, clean up, fullscreen) */
 .pane-tools { display: inline-flex; align-items: center; gap: 4px; }
-.pane-label-row .text-btn {
-  font-size: 11px; padding: 2px 8px; color: var(--ui-muted);
-  text-transform: none; letter-spacing: 0;
+/* Extra gap plus a divider to set a tool apart from the group before it */
+.pane-tools .tool-sep { position: relative; margin-left: 13px; }
+.pane-tools .tool-sep::before {
+  content: ""; position: absolute; left: -9px; top: 5px; bottom: 5px;
+  width: 1px; background: var(--ui-border);
 }
-.pane-label-row .text-btn:hover { color: var(--ui-text); }
-.pane-label-row .icon-btn.copied, .code-copy-btn.copied { color: var(--success); }
+.code-copy-btn.copied { color: var(--success); }
 
 /* Floating copy button shown while hovering code in the preview */
 .code-copy-btn {
@@ -294,6 +297,27 @@ footer a:hover { color: var(--accent); }
 }
 .code-copy-btn.visible { display: inline-flex; }
 .code-copy-btn:hover { background: var(--ui-input); color: var(--ui-text); }
+
+/* Copy button over the Markdown input, matching the preview's hover button.
+   Inset from the right to clear the textarea's scrollbar; hidden while empty. */
+.input-copy-btn {
+  position: absolute; top: 8px; right: 22px; z-index: 2; display: none;
+  width: 24px; height: 24px; padding: 0;
+  align-items: center; justify-content: center;
+  border-radius: 5px; border: 1px solid var(--ui-border);
+  background: var(--ui-float); color: var(--ui-muted);
+  box-shadow: 0 1px 3px rgba(0,0,0,.15);
+}
+.input-wrap:hover .input-copy-btn,
+.input-wrap:focus-within .input-copy-btn,
+.input-copy-btn.copied { display: inline-flex; }
+#mdInput:placeholder-shown ~ .input-copy-btn { display: none; }
+.input-copy-btn:hover { background: var(--ui-input); color: var(--ui-text); }
+.input-copy-btn.copied { color: var(--success); }
+/* Touch screens have no hover, so keep it showing there */
+@media (hover: none) {
+  .input-copy-btn { display: inline-flex; }
+}
 
 /* Printing: only the rendered preview, flowing across pages instead of scrolling in its pane */
 @media print {

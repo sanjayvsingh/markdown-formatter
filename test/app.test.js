@@ -85,11 +85,77 @@ describe("copying", () => {
     assert.match(clipboard.text, /<title>Fish &amp; Chips &quot;Deluxe&quot;<\/title>/);
   });
 
-  test("the Markdown pane's copy button copies the raw source", async () => {
+  test("the Markdown input's copy button copies the raw source", async () => {
     const { $, clipboard } = await loadApp({ input: "# Raw **md**" });
     $("btnCopyMd").click();
     await tick();
     assert.equal(clipboard.text, "# Raw **md**");
+  });
+
+  test("the Markdown copy button sits inside the input, not the pane header", async () => {
+    const { $ } = await loadApp();
+    assert.equal($("btnCopyMd").parentElement, $("mdInput").parentElement);
+    assert.equal($("btnCopyMd").closest(".pane-label"), null);
+  });
+});
+
+describe("loading input", () => {
+  test("Paste replaces the input with the clipboard and renders it", async () => {
+    const { $, clipboard } = await loadApp({ input: "old text" });
+    clipboard.text = "# From the clipboard";
+    $("btnPaste").click();
+    await tick();
+    assert.equal($("mdInput").value, "# From the clipboard");
+    assert.equal($("preview").querySelector("h1").textContent, "From the clipboard");
+  });
+
+  test("Paste leaves the input alone when the clipboard is empty", async () => {
+    const { $ } = await loadApp({ input: "keep me" });
+    $("btnPaste").click();
+    await tick();
+    assert.equal($("mdInput").value, "keep me");
+    assert.match($("copyStatus").textContent, /empty/);
+  });
+
+  test("Paste suggests Ctrl+V when clipboard access is refused", async () => {
+    const { $, clipboard } = await loadApp({ input: "keep me" });
+    clipboard.text = "secret";
+    clipboard.denyRead = true;
+    $("btnPaste").click();
+    await tick();
+    assert.equal($("mdInput").value, "keep me");
+    assert.match($("copyStatus").textContent, /Ctrl\+V/);
+  });
+
+  // jsdom can't drive a real file dialog, so hand the input its files directly.
+  function chooseFile(window, input, file) {
+    Object.defineProperty(input, "files", { value: [file], configurable: true });
+    input.dispatchEvent(new window.Event("change"));
+  }
+
+  test("Open opens the file picker", async () => {
+    const { $ } = await loadApp();
+    let opened = false;
+    $("fileInput").click = () => { opened = true; };
+    $("btnOpenFile").click();
+    assert.ok(opened);
+  });
+
+  test("a chosen .md file is read into the input", async () => {
+    const { $, window } = await loadApp({ input: "old" });
+    chooseFile(window, $("fileInput"), new window.File(["# From a file"], "notes.md"));
+    await tick(50);
+    assert.equal($("mdInput").value, "# From a file");
+    assert.equal($("preview").querySelector("h1").textContent, "From a file");
+    assert.match($("copyStatus").textContent, /Loaded notes\.md/);
+  });
+
+  test("a chosen file that isn't Markdown is rejected", async () => {
+    const { $, window } = await loadApp({ input: "old" });
+    chooseFile(window, $("fileInput"), new window.File(["x"], "photo.png", { type: "image/png" }));
+    await tick(50);
+    assert.equal($("mdInput").value, "old");
+    assert.match($("copyStatus").textContent, /Not a Markdown file/);
   });
 });
 
@@ -112,6 +178,36 @@ describe("Clean up", () => {
     assert.equal(await cleanUp(wrapped),
       "This is a long sentence that the terminal wrapped at its width so it continues on this line.\n\n" +
       "A short one.");
+  });
+
+  test("rejoins a stray break in a long paragraph, marked by an indented next line", async () => {
+    const long = "A paragraph far wider than any terminal. ".repeat(8) + "It breaks after";
+    assert.equal(await cleanUp("Intro.\n\n" + long + "\n the next word.\n\nThanks,\nMe"),
+      "Intro.\n\n" + long + " the next word.\n\nThanks,\nMe");
+  });
+
+  test("collapses runs of spaces inside a line but not in inline code", async () => {
+    assert.equal(await cleanUp("cutting noise, but     our teams `a  b`"), "cutting noise, but our teams `a  b`");
+  });
+
+  test("never joins a line onto a heading, a table row, or into a new list item", async () => {
+    const md = "# Title\n  indented text\n\n| a | b |\n  more\n\nsome text\n  - a list item";
+    assert.equal(await cleanUp(md), "# Title\nindented text\n\n| a | b |\n  more\n\nsome text\n  - a list item");
+  });
+
+  test("removes each block's own indentation, as in a copied terminal reply", async () => {
+    assert.equal(await cleanUp("● Reply\n\n  Why it happens:\n  - one\n  - two\n\n  What to do:\n  - three"),
+      "● Reply\n\nWhy it happens:\n- one\n- two\n\nWhat to do:\n- three");
+  });
+
+  test("keeps a list item's second paragraph under the item", async () => {
+    const md = "- item\n\n  more about the item\n\nAfter the list.";
+    assert.equal(await cleanUp(md), md);
+    assert.equal(await cleanUp("  - item\n\n    more about it"), "- item\n\n  more about it");
+  });
+
+  test("trims blank lines and whitespace from the start and end", async () => {
+    assert.equal(await cleanUp("\n\n  \nText here.\n\n  \n"), "Text here.");
   });
 
   test("leaves fenced code alone", async () => {

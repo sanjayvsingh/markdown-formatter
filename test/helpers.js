@@ -26,7 +26,8 @@ async function loadApp(opts = {}) {
   w.Blob = Blob;
   w.TextEncoder = TextEncoder;
 
-  const clipboard = { html: null, text: null };
+  // Set clipboard.text to stage a paste, or denyRead to refuse permission.
+  const clipboard = { html: null, text: null, denyRead: false };
   w.ClipboardItem = class { constructor(data) { this.data = data; } };
   Object.defineProperty(w.navigator, "clipboard", {
     value: {
@@ -34,7 +35,11 @@ async function loadApp(opts = {}) {
         clipboard.html = await items[0].data["text/html"].text();
         clipboard.text = await items[0].data["text/plain"].text();
       },
-      async writeText(t) { clipboard.text = t; }
+      async writeText(t) { clipboard.text = t; },
+      async readText() {
+        if (clipboard.denyRead) throw new w.DOMException("Read permission denied", "NotAllowedError");
+        return clipboard.text || "";
+      }
     }
   });
 

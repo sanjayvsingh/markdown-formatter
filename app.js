@@ -300,9 +300,68 @@
   els.mdInput.value = savedInput;
   renderNow();
 
-  // ---- Drag & drop a .md file onto the input pane ----
+  // Replaces the whole input via insertText, which keeps the change on the
+  // textarea's undo stack (Ctrl+Z), falling back to a plain assignment.
+  function replaceInput(text) {
+    els.mdInput.focus();
+    els.mdInput.select();
+    var ok = false;
+    try { ok = document.execCommand("insertText", false, text); } catch (e) {}
+    if (!ok || els.mdInput.value !== text) els.mdInput.value = text;
+    renderNow();
+  }
+
+  // ---- Load a .md file: drag & drop, or the Open button's file picker ----
+  // Files are read in the browser with FileReader; nothing is uploaded.
   var MD_EXTENSIONS = /\.(md|markdown|mdown|mkd|mkdn|mdtext|txt|text)$/i;
   var MAX_DROP_BYTES = 5 * 1024 * 1024;
+
+  function loadFile(file) {
+    if (!MD_EXTENSIONS.test(file.name) && file.type.indexOf("text/") !== 0) {
+      flashStatus("Not a Markdown file", true);
+      return;
+    }
+    if (file.size > MAX_DROP_BYTES) {
+      flashStatus("File too large (max 5 MB)", true);
+      return;
+    }
+
+    var reader = new FileReader();
+    reader.onload = function () {
+      replaceInput(reader.result);
+      flashStatus("Loaded " + file.name + " ✓");
+    };
+    reader.onerror = function () { flashStatus("Could not read file", true); };
+    reader.readAsText(file);
+  }
+
+  var fileInput = document.getElementById("fileInput");
+  document.getElementById("btnOpenFile").addEventListener("click", function () {
+    fileInput.click();
+  });
+  fileInput.addEventListener("change", function () {
+    if (fileInput.files && fileInput.files.length) loadFile(fileInput.files[0]);
+    // Clear it so choosing the same file again still fires "change".
+    fileInput.value = "";
+  });
+
+  // ---- Paste the clipboard over the input ----
+  // readText() needs a secure context and, in most browsers, the user's
+  // permission; when it's unavailable or refused, point them at Ctrl+V.
+  document.getElementById("btnPaste").addEventListener("click", function () {
+    if (!navigator.clipboard || !navigator.clipboard.readText) {
+      flashStatus("Paste unavailable, use Ctrl+V", true);
+      return;
+    }
+    navigator.clipboard.readText().then(function (text) {
+      if (!text) { flashStatus("Clipboard is empty", true); return; }
+      replaceInput(text);
+      flashStatus("Pasted ✓ (Ctrl+Z undoes)");
+    }, function () {
+      flashStatus("Couldn't read clipboard, use Ctrl+V", true);
+    });
+  });
+
   var dropZone = document.getElementById("leftPane");
   var dragDepth = 0;
 
@@ -343,26 +402,7 @@
     setDragState(false);
 
     var files = e.dataTransfer.files;
-    if (!files || !files.length) return;
-    var file = files[0];
-
-    if (!MD_EXTENSIONS.test(file.name) && file.type.indexOf("text/") !== 0) {
-      flashStatus("Not a Markdown file", true);
-      return;
-    }
-    if (file.size > MAX_DROP_BYTES) {
-      flashStatus("File too large (max 5 MB)", true);
-      return;
-    }
-
-    var reader = new FileReader();
-    reader.onload = function () {
-      els.mdInput.value = reader.result;
-      renderNow();
-      flashStatus("Loaded " + file.name + " ✓");
-    };
-    reader.onerror = function () { flashStatus("Could not read file", true); };
-    reader.readAsText(file);
+    if (files && files.length) loadFile(files[0]);
   });
 
   // Without this, dropping a file anywhere outside the drop zone makes the
@@ -681,6 +721,18 @@
   // ---- Clean up Markdown pasted from a terminal ----
   var BLOCK_START = /^\s*(#|>|\||[-*+]\s|\d+[.)]\s|```|~~~|<|-{3,}\s*$|={3,}\s*$|\*{3,}\s*$|_{3,}\s*$)/;
   var FENCE = /^\s*(```|~~~)/;
+  // Lines that end a paragraph, so nothing may be joined onto them: headings,
+  // rules and setext underlines, table rows, and explicit backslash breaks.
+  var NO_CONTINUE = /^\s*(#|\||-{3,}\s*$|={3,}\s*$|\*{3,}\s*$|_{3,}\s*$)|\\$/;
+
+  // Collapses runs of spaces inside a line to one, keeping the indentation and
+  // anything inside `inline code`.
+  function collapseSpaces(l) {
+    var indent = l.match(/^\s*/)[0];
+    return indent + l.slice(indent.length).replace(/(`+)[\s\S]*?\1|[ \t]{2,}/g, function (m, ticks) {
+      return ticks ? m : " ";
+    });
+  }
 
   function cleanTerminalText(src) {
     var lines = src.replace(/\r\n?/g, "\n").split("\n").map(function (l) {
@@ -689,58 +741,88 @@
               .replace(/[ \t ]+$/, "");
     });
 
-    // Remove indentation shared by every line. The first line is excluded from
-    // the minimum because a selection often starts after the terminal's indent.
     function indentOf(l) { return l.match(/^ */)[0].length; }
-    var nonBlank = [];
-    lines.forEach(function (l, i) { if (l) nonBlank.push(i); });
-    var rest = nonBlank.length > 1 ? nonBlank.slice(1) : nonBlank;
-    var common = rest.length ? Math.min.apply(null, rest.map(function (i) { return indentOf(lines[i]); })) : 0;
-    if (common > 0) {
-      lines = lines.map(function (l) { return l.slice(Math.min(common, indentOf(l))); });
-    }
+    // Taken before shared indentation is removed: a line indented further than
+    // the one above it is a stray break mid-paragraph, and is rejoined below.
+    var origIndent = lines.map(indentOf);
 
-    // Rejoin lines the terminal hard-wrapped. A line counts as wrapped when the
-    // next line's first word wouldn't have fit within the widest line (a proxy
-    // for terminal width). Fenced code is left alone — joining there could
+    // Split into blocks at blank lines (blank lines inside fenced code don't
+    // count), so each block's indentation can be judged on its own: terminal
+    // output often mixes unindented lines (prompts, bullets) with indented ones.
+    var blocks = [], cur = null, fenced = false;
+    lines.forEach(function (l, i) {
+      if (FENCE.test(l)) fenced = !fenced;
+      if (!l && !fenced) { cur = null; return; }
+      if (!cur) blocks.push(cur = []);
+      cur.push(i);
+    });
+
+    // Remove each block's shared indentation, except where a block continues a
+    // list item above it (indented to that item's text, as a second paragraph
+    // would be): it keeps its place under the item, moving only as far as the
+    // item did. In the first block the first line is left out of the minimum,
+    // because a selection often starts after the terminal's indent.
+    var LIST_ITEM = /^ *([-*+]|\d+[.)]) +/;
+    var listCol = -1, shift = 0;
+    blocks.forEach(function (block, b) {
+      var measured = b === 0 && block.length > 1 ? block.slice(1) : block;
+      var indent = Math.min.apply(null, measured.map(function (i) { return origIndent[i]; }));
+      var continuesList = listCol >= 0 && indent >= listCol;
+      if (!continuesList) shift = indent;
+
+      var col = -1;
+      block.forEach(function (i) {
+        var m = lines[i].match(LIST_ITEM);
+        if (m) col = Math.max(col, m[0].length);
+      });
+      if (col >= 0) listCol = col;
+      else if (!continuesList) listCol = -1;
+
+      if (shift > 0) block.forEach(function (i) { lines[i] = lines[i].slice(Math.min(shift, origIndent[i])); });
+    });
+
+    // Rejoin broken lines. A line counts as terminal-wrapped when its first word
+    // wouldn't have fit on the line above within the widest line (a proxy for
+    // terminal width), which only applies to terminal-width text; a line
+    // indented further than the one above it is rejoined at any width. Joining
+    // never changes the rendering, since Markdown reads a lone newline inside
+    // a paragraph as a space. Fenced code is left alone — joining there could
     // merge genuinely separate lines of code.
     var inFence = false, width = 0;
     lines.forEach(function (l) {
       if (FENCE.test(l)) { inFence = !inFence; return; }
       if (!inFence) width = Math.max(width, l.length);
     });
-    if (width < 40 || width > 250) return lines.join("\n");
+    var terminalWidth = width >= 40 && width <= 250;
 
     var out = [];
     inFence = false;
     var prevLen = -1; // physical length of the previous prose line, or -1 if it can't be continued
-    lines.forEach(function (l) {
+    lines.forEach(function (l, i) {
       if (FENCE.test(l)) { inFence = !inFence; out.push(l); prevLen = -1; return; }
       if (inFence || !l) { out.push(l); prevLen = -1; return; }
+      l = collapseSpaces(l);
       var body = l.trim();
       var firstWord = body.split(/\s+/)[0];
-      if (prevLen >= 0 && !BLOCK_START.test(l) && prevLen + 1 + firstWord.length > width) {
+      var wrapped = terminalWidth && prevLen + 1 + firstWord.length > width;
+      var strayBreak = origIndent[i] > origIndent[i - 1];
+      if (prevLen >= 0 && !BLOCK_START.test(l) && (wrapped || strayBreak)) {
         out[out.length - 1] += " " + body;
       } else {
         out.push(l);
       }
       // Wrapped table rows can't be repaired by joining, so never continue one.
-      prevLen = /^\s*\|/.test(l) ? -1 : l.length;
+      prevLen = NO_CONTINUE.test(l) ? -1 : l.length;
     });
-    return out.join("\n");
+    // Drop blank lines at the start and whitespace at the end of the text.
+    return out.join("\n").replace(/^\n+/, "").replace(/\s+$/, "");
   }
 
   document.getElementById("btnCleanup").addEventListener("click", function () {
     var before = els.mdInput.value;
     var after = cleanTerminalText(before);
     if (after === before) { flashStatus("Nothing to clean up"); return; }
-    // insertText keeps the change on the textarea's undo stack (Ctrl+Z).
-    els.mdInput.focus();
-    els.mdInput.select();
-    var ok = false;
-    try { ok = document.execCommand("insertText", false, after); } catch (e) {}
-    if (!ok || els.mdInput.value !== after) els.mdInput.value = after;
-    renderNow();
+    replaceInput(after);
     flashStatus("Cleaned up ✓ (Ctrl+Z undoes)");
   });
 
