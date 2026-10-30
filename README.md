@@ -30,6 +30,7 @@ No backend required. It's a static page — paste Markdown, get styled HTML, cop
   - collapses runs of spaces inside a line
   - rejoins lines the terminal hard-wrapped, or that were broken mid-sentence (spotted by the next line being indented)
   - trims blank lines and whitespace from the start and end
+  - puts text bar charts (two or more lines of `█` and `░` bars) in a code block, so they keep their line breaks and alignment
 
   Fenced code and inline code are left alone, and Ctrl+Z undoes it.
 
@@ -65,7 +66,7 @@ index.html       — structure
 styles.css        — all styling, including the dark theme
 theme.js          — light/dark theme switching (loaded early to avoid a flash of the wrong theme)
 app.js            — application logic
-marked.min.js     — Markdown parser, marked 18.1.1 (vendored from the package's lib/marked.umd.js, MIT)
+marked.min.js     — Markdown parser, marked 18.1.2 (vendored from the package's lib/marked.umd.js, MIT)
 purify.min.js     — DOMPurify 3.4.17, sanitizes rendered HTML before display (vendored, Apache-2.0/MPL-2.0)
 docx.js           — builds the Word download in the browser (no dependencies)
 serve.py          — static file server with security headers
