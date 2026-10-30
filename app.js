@@ -309,7 +309,21 @@
     try { ok = document.execCommand("insertText", false, text); } catch (e) {}
     if (!ok || els.mdInput.value !== text) els.mdInput.value = text;
     renderNow();
+    moveCursorToTop();
   }
+
+  function moveCursorToTop() {
+    els.mdInput.setSelectionRange(0, 0);
+    els.mdInput.scrollTop = 0;
+  }
+
+  // A Ctrl+V that replaces everything is a new document, so start at the top
+  // like the Paste button does. Pasting into existing text keeps the cursor.
+  els.mdInput.addEventListener("paste", function () {
+    var input = els.mdInput;
+    if (input.selectionStart !== 0 || input.selectionEnd !== input.value.length) return;
+    setTimeout(moveCursorToTop);
+  });
 
   // ---- Load a .md file: drag & drop, or the Open button's file picker ----
   // Files are read in the browser with FileReader; nothing is uploaded.
@@ -734,12 +748,42 @@
     });
   }
 
+  // Puts text bar charts in fenced code. As plain text their lines would run
+  // together into one paragraph and lose the fixed-width font they line up in.
+  // Two lines are required so a lone redaction or progress bar is left alone,
+  // and lines already in a table, list or quote are skipped.
+  var BAR_CHART = /[█▓▒░▏▎▍▌▋▊▉]{2,}/;
+
+  function isBarChartLine(l) {
+    return BAR_CHART.test(l) && !BLOCK_START.test(l);
+  }
+
+  function fenceBarCharts(lines) {
+    var out = [], fenced = false;
+    for (var i = 0; i < lines.length; i++) {
+      if (FENCE.test(lines[i])) fenced = !fenced;
+      var end = i;
+      while (!fenced && end < lines.length && isBarChartLine(lines[end])) end++;
+      if (end - i < 2) { out.push(lines[i]); continue; }
+
+      var chart = lines.slice(i, end);
+      var indent = Math.min.apply(null, chart.map(function (l) { return l.match(/^ */)[0].length; }));
+      if (out.length && out[out.length - 1]) out.push("");
+      out.push("```");
+      chart.forEach(function (l) { out.push(l.slice(indent)); });
+      out.push("```");
+      if (end < lines.length && lines[end]) out.push("");
+      i = end - 1;
+    }
+    return out;
+  }
+
   function cleanTerminalText(src) {
-    var lines = src.replace(/\r\n?/g, "\n").split("\n").map(function (l) {
+    var lines = fenceBarCharts(src.replace(/\r\n?/g, "\n").split("\n").map(function (l) {
       // Terminals pad lines with trailing spaces, which Markdown reads as <br>.
       return l.replace(/^ +/, function (m) { return m.replace(/ /g, " "); })
               .replace(/[ \t ]+$/, "");
-    });
+    }));
 
     function indentOf(l) { return l.match(/^ */)[0].length; }
     // Taken before shared indentation is removed: a line indented further than

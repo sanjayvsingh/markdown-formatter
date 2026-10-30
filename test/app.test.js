@@ -150,6 +150,50 @@ describe("loading input", () => {
     assert.match($("copyStatus").textContent, /Loaded notes\.md/);
   });
 
+  function assertAtTop(input) {
+    assert.equal(input.selectionStart, 0);
+    assert.equal(input.selectionEnd, 0);
+    assert.equal(input.scrollTop, 0);
+  }
+
+  test("the cursor starts at the top after Paste, Open and Clean up", async () => {
+    const { $, clipboard, window } = await loadApp({ input: "old" });
+    clipboard.text = "# Pasted\n\ntext";
+    $("btnPaste").click();
+    await tick();
+    assertAtTop($("mdInput"));
+
+    chooseFile(window, $("fileInput"), new window.File(["# From a file\n\ntext"], "notes.md"));
+    await tick(50);
+    assertAtTop($("mdInput"));
+
+    $("mdInput").value = "  indented text  ";
+    $("btnCleanup").click();
+    assertAtTop($("mdInput"));
+  });
+
+  // jsdom doesn't perform a paste, so fire the event and then change the value.
+  async function nativePaste(window, input, text, cursor) {
+    input.dispatchEvent(new window.Event("paste"));
+    input.value = text;
+    input.setSelectionRange(cursor, cursor);
+    await tick();
+  }
+
+  test("Ctrl+V over the whole input moves the cursor to the top", async () => {
+    const { $, window } = await loadApp({ input: "old" });
+    $("mdInput").select();
+    await nativePaste(window, $("mdInput"), "# New document", 14);
+    assertAtTop($("mdInput"));
+  });
+
+  test("Ctrl+V into existing text keeps the cursor where it lands", async () => {
+    const { $, window } = await loadApp({ input: "old text" });
+    $("mdInput").setSelectionRange(3, 3);
+    await nativePaste(window, $("mdInput"), "old pasted text", 10);
+    assert.equal($("mdInput").selectionStart, 10);
+  });
+
   test("a chosen file that isn't Markdown is rejected", async () => {
     const { $, window } = await loadApp({ input: "old" });
     chooseFile(window, $("fileInput"), new window.File(["x"], "photo.png", { type: "image/png" }));
@@ -208,6 +252,29 @@ describe("Clean up", () => {
 
   test("trims blank lines and whitespace from the start and end", async () => {
     assert.equal(await cleanUp("\n\n  \nText here.\n\n  \n"), "Text here.");
+  });
+
+  test("fences text bar charts, keeping their titles and alignment", async () => {
+    const md =
+      "Work Type:\n  Write Docs   ████░░░░  50%\n  Debug Fix    ██░░░░░░  25%\n\n" +
+      "Tools:\n  chrome    ████  257 calls\n  rovo      ██░░  141 calls\nAfter.";
+    const out = await cleanUp(md);
+    assert.equal(out,
+      "Work Type:\n\n```\nWrite Docs   ████░░░░  50%\nDebug Fix    ██░░░░░░  25%\n```\n\n" +
+      "Tools:\n\n```\nchrome    ████  257 calls\nrovo      ██░░  141 calls\n```\n\nAfter.");
+    assert.equal(await cleanUp(out), out);
+  });
+
+  test("leaves bars alone in tables and on a line of their own", async () => {
+    const table = "| a | ████ |\n| b | ██░░ |";
+    assert.equal(await cleanUp(table), table);
+    const redacted = "The name ████ was removed.\nThe rest stayed.";
+    assert.equal(await cleanUp(redacted), redacted);
+  });
+
+  test("leaves a bar chart that is already fenced alone", async () => {
+    const md = "```\n  a  ████\n  b  ██░░\n```";
+    assert.equal(await cleanUp(md), md);
   });
 
   test("leaves fenced code alone", async () => {
