@@ -79,8 +79,8 @@ index.html       — structure
 styles.css        — all styling, including the dark theme
 theme.js          — light/dark theme switching (loaded early to avoid a flash of the wrong theme)
 app.js            — application logic
-marked.min.js     — Markdown parser, marked 18.1.2 (vendored from the package's lib/marked.umd.js, MIT)
-purify.min.js     — DOMPurify 3.4.17, sanitizes rendered HTML before display (vendored, Apache-2.0/MPL-2.0)
+marked.min.js     — Markdown parser, marked 18.2.0 (vendored from the package's lib/marked.umd.js, MIT)
+purify.min.js     — DOMPurify 3.4.18, sanitizes rendered HTML before display (vendored, Apache-2.0/MPL-2.0)
 docx.js           — builds the Word download in the browser (no dependencies)
 manifest.json     — makes the page installable as an app that opens .md files
 icon-192.png, icon-512.png — app icons
