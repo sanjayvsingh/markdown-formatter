@@ -22,7 +22,7 @@ No backend required. It's a static page — paste Markdown, get styled HTML, cop
 - Download buttons (icons in the header): a Word `.docx` file or a standalone `.html` file. The Word file is built in the browser and keeps your fonts, sizes and colors; headings and lists become real Word headings and lists, and links stay clickable. Images are not embedded (their alt text is kept).
 - Three ways to load Markdown besides typing: the **Paste** icon replaces the input with the clipboard, the **Open** icon picks a `.md` file from your computer, or drag a file onto the input pane. Files are read in the browser and never uploaded. Ctrl+Z undoes a paste or load.
   - Browsers guard clipboard reads: Chrome and Edge ask for permission once per site, then Paste works in one click; Firefox and Safari show a small "Paste" confirmation every time, which a page can't skip. Ctrl+V into the input always works.
-- Open `.md` files by double-clicking them (Chrome and Edge only): see [Opening files by double-click](#opening-md-files-by-double-click)
+- Open `.md` files by double-clicking them (Chrome and Edge only): see [Install as an app](#install-as-an-app-to-open-md-files-by-double-click)
 - Hover the Markdown input for a copy button that copies the raw source
 - Hover any code block, inline code or quote in the preview to get a copy button for just that part (a quote is copied without its quote formatting)
 - **Clean up** (the magic-wand icon, set apart to the right of Paste and Open) tidies Markdown copied out of a terminal or chat:
@@ -43,23 +43,44 @@ It's fully static — any web server works. A hardened one is included:
 python serve.py [port]   # defaults to 8000, binds 127.0.0.1
 ```
 
-`serve.py` uses only the Python standard library, so it runs with no extra dependencies, and attaches security headers (CSP, `X-Frame-Options`, `X-Content-Type-Options`, `Referrer-Policy`, `Permissions-Policy`, `Strict-Transport-Security`) to every response. If you're fronting this with your own server (nginx, Apache, Flask, etc.) instead, port the `HEADERS` dict at the top of `serve.py` into that config.
+`serve.py` uses only the Python standard library, so it runs with no extra dependencies, and attaches security headers (CSP, `X-Frame-Options`, `X-Content-Type-Options`, `Referrer-Policy`, `Permissions-Policy`, `Strict-Transport-Security`) to every response. If you're fronting this with your own server (nginx, Apache, Flask, etc.) instead, port the `HEADERS` dict at the top of `serve.py` into that config. For Apache that's already done: upload the included `.htaccess` next to `index.html` (upload the file itself rather than pasting its contents, since a wrapped line breaks it).
 
 The Clipboard API that "Copy Rich Text" and **Paste** depend on requires a secure context — serve over HTTPS (or `localhost`) for them to work.
 
 Pasting into Word: if fonts and colors disappear, Word is set to merge pasted text with the document's formatting. Choose **Keep Source Formatting** from the paste options, or set it as the default under File → Options → Advanced → *Pasting from other programs*.
 
-## Opening .md files by double-click
+## Install as an app to open .md files by double-click
 
-In Chrome or Edge the page can be installed as an app that the operating system offers as a handler for Markdown files. Firefox and Safari don't support this.
+In Chrome or Edge the page can be installed as an app that the operating system offers as a handler for Markdown files. After that, double-clicking a `.md` file, or clicking a link to one in a terminal that hands links to the operating system, opens it rendered. Firefox and Safari don't support this.
 
-1. Open the site over HTTPS and install it: the install icon at the right of the address bar, or the browser menu → *Cast, save and share* → *Install page as app*.
-2. Make it the default for `.md` files:
+### Install
+
+1. Open the site in Chrome or Edge. It has to be served over HTTPS (or from `localhost`).
+2. Install it: the install icon at the right of the address bar, or the browser menu → *Cast, save and share* → *Install page as app*.
+3. Make it the default for `.md` files:
    - **Mac:** select a `.md` file in Finder, File → Get Info → *Open with* → Markdown Formatter → **Change All**.
    - **Windows:** right-click a `.md` file → Open with → Choose another app → Markdown Formatter → **Always**.
-3. Double-click a `.md` file. The first time, the browser asks whether the app may open files; choose to always allow it.
+4. Double-click a `.md` file. The first time, the browser asks whether the app may open files; choose to always allow it.
 
-The file opens in the app's own window and is read locally, like the Open button; nothing is uploaded. `manifest.json` declares the file types and `icon-192.png` / `icon-512.png` are the app's icons.
+### How it behaves
+
+- The file opens in the app's own window, without tabs or an address bar. Each file gets its own window.
+- The file is read locally, like the Open button, with the same type check and 5 MB limit. Nothing is uploaded and the app never writes to the file.
+- The app is the website in its own window, not a separate copy. It picks up whatever is on the site the next time it loads, so there is nothing to reinstall after an update, and it needs the site to be reachable (there is no offline mode).
+- Settings and the last input are shared with the site opened in a normal tab of the same browser profile. The last file opened stays in the browser's `localStorage` until something else is loaded.
+- Besides `.md`, it registers `.markdown`, `.mdown`, `.mkd`, `.mkdn` and `.mdtext`.
+
+### Uninstall
+
+Open the app, then its ⋮ menu → *Uninstall Markdown Formatter*. Files go back to whatever opened them before.
+
+### If the Install option doesn't appear
+
+- The page isn't on HTTPS or `localhost`, or it's open in Firefox or Safari.
+- `manifest.json` or one of the two icons didn't upload: DevTools → Application → Manifest lists what's missing under Installability.
+- A managed (work) browser may block installing web apps by policy.
+
+`manifest.json` declares the app and its file types, and `icon-192.png` / `icon-512.png` are its icons. All three must sit next to `index.html`.
 
 ## Tests
 
