@@ -54,6 +54,9 @@ async function loadApp(opts = {}) {
     downloads.push({ name: this.download, blob: blobs.get(this.href) });
   };
 
+  // Hook for stubbing extra browser APIs before the app's scripts run.
+  if (opts.before) opts.before(w);
+
   for (const f of SCRIPTS) w.eval(fs.readFileSync(path.join(APP_DIR, f), "utf8"));
   // jsdom fires DOMContentLoaded after construction, unlike a browser running
   // these scripts mid-parse, so wait for it before handing the page over.

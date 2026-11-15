@@ -150,6 +150,33 @@ describe("loading input", () => {
     assert.match($("copyStatus").textContent, /Loaded notes\.md/);
   });
 
+  test("a file the OS launches the installed app with is read into the input", async () => {
+    let consumer;
+    const { $, window } = await loadApp({
+      input: "old",
+      before(w) { w.launchQueue = { setConsumer(fn) { consumer = fn; } }; }
+    });
+    const file = new window.File(["# Double-clicked"], "report.md");
+    consumer({ files: [{ getFile: async () => file }] });
+    await tick(50);
+    assert.equal($("mdInput").value, "# Double-clicked");
+    assert.match($("copyStatus").textContent, /Loaded report\.md/);
+
+    // A plain launch (no file) leaves the input alone.
+    consumer({ files: [] });
+    await tick(50);
+    assert.equal($("mdInput").value, "# Double-clicked");
+  });
+
+  test("the manifest registers Markdown file types and has install icons", () => {
+    const fs = require("fs"), path = require("path");
+    const dir = path.join(__dirname, "..");
+    const manifest = JSON.parse(fs.readFileSync(path.join(dir, "manifest.json"), "utf8"));
+    assert.ok(manifest.file_handlers[0].accept["text/markdown"].includes(".md"));
+    for (const icon of manifest.icons) assert.ok(fs.existsSync(path.join(dir, icon.src)), icon.src);
+    assert.match(fs.readFileSync(path.join(dir, "index.html"), "utf8"), /rel="manifest" href="manifest\.json"/);
+  });
+
   function assertAtTop(input) {
     assert.equal(input.selectionStart, 0);
     assert.equal(input.selectionEnd, 0);

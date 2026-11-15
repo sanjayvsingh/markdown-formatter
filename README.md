@@ -22,6 +22,7 @@ No backend required. It's a static page — paste Markdown, get styled HTML, cop
 - Download buttons (icons in the header): a Word `.docx` file or a standalone `.html` file. The Word file is built in the browser and keeps your fonts, sizes and colors; headings and lists become real Word headings and lists, and links stay clickable. Images are not embedded (their alt text is kept).
 - Three ways to load Markdown besides typing: the **Paste** icon replaces the input with the clipboard, the **Open** icon picks a `.md` file from your computer, or drag a file onto the input pane. Files are read in the browser and never uploaded. Ctrl+Z undoes a paste or load.
   - Browsers guard clipboard reads: Chrome and Edge ask for permission once per site, then Paste works in one click; Firefox and Safari show a small "Paste" confirmation every time, which a page can't skip. Ctrl+V into the input always works.
+- Open `.md` files by double-clicking them (Chrome and Edge only): see [Opening files by double-click](#opening-md-files-by-double-click)
 - Hover the Markdown input for a copy button that copies the raw source
 - Hover any code block, inline code or quote in the preview to get a copy button for just that part (a quote is copied without its quote formatting)
 - **Clean up** (the magic-wand icon, set apart to the right of Paste and Open) tidies Markdown copied out of a terminal or chat:
@@ -48,6 +49,18 @@ The Clipboard API that "Copy Rich Text" and **Paste** depend on requires a secur
 
 Pasting into Word: if fonts and colors disappear, Word is set to merge pasted text with the document's formatting. Choose **Keep Source Formatting** from the paste options, or set it as the default under File → Options → Advanced → *Pasting from other programs*.
 
+## Opening .md files by double-click
+
+In Chrome or Edge the page can be installed as an app that the operating system offers as a handler for Markdown files. Firefox and Safari don't support this.
+
+1. Open the site over HTTPS and install it: the install icon at the right of the address bar, or the browser menu → *Cast, save and share* → *Install page as app*.
+2. Make it the default for `.md` files:
+   - **Mac:** select a `.md` file in Finder, File → Get Info → *Open with* → Markdown Formatter → **Change All**.
+   - **Windows:** right-click a `.md` file → Open with → Choose another app → Markdown Formatter → **Always**.
+3. Double-click a `.md` file. The first time, the browser asks whether the app may open files; choose to always allow it.
+
+The file opens in the app's own window and is read locally, like the Open button; nothing is uploaded. `manifest.json` declares the file types and `icon-192.png` / `icon-512.png` are the app's icons.
+
 ## Tests
 
 Automated tests use Node's built-in test runner, with [jsdom](https://github.com/jsdom/jsdom) standing in for the browser. They need Node 22.22.2+ or 24.15+ (what the current jsdom supports):
@@ -69,7 +82,10 @@ app.js            — application logic
 marked.min.js     — Markdown parser, marked 18.1.2 (vendored from the package's lib/marked.umd.js, MIT)
 purify.min.js     — DOMPurify 3.4.17, sanitizes rendered HTML before display (vendored, Apache-2.0/MPL-2.0)
 docx.js           — builds the Word download in the browser (no dependencies)
+manifest.json     — makes the page installable as an app that opens .md files
+icon-192.png, icon-512.png — app icons
 serve.py          — static file server with security headers
+.htaccess         — the same security headers for Apache hosting (the PHP handler block at the top is cPanel's; drop it on other hosts)
 test/             — automated tests (not needed to run the app)
 package.json      — test runner setup (not needed to run the app)
 ```

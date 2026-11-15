@@ -359,6 +359,19 @@
     fileInput.value = "";
   });
 
+  // ---- Open a file handed over by the operating system ----
+  // When the page is installed as an app (Chrome, Edge) and set as the default
+  // for .md files, double-clicking one launches the app with the file queued
+  // here. manifest.json's file_handlers is what registers the file types.
+  if ("launchQueue" in window) {
+    window.launchQueue.setConsumer(function (params) {
+      if (!params.files || !params.files.length) return;
+      params.files[0].getFile().then(loadFile, function () {
+        flashStatus("Could not read file", true);
+      });
+    });
+  }
+
   // ---- Paste the clipboard over the input ----
   // readText() needs a secure context and, in most browsers, the user's
   // permission; when it's unavailable or refused, point them at Ctrl+V.
